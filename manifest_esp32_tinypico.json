@@ -1,14 +1,13 @@
 {
-  "name": "RetailMind ESP32 Audio Recorder (I2S)",
+  "name": "RetailMind – ESP32 TinyPico",
   "version": "1.0.0",
-  "funding_url": "https://devolut.tech/",
   "builds": [
     {
       "chipFamily": "ESP32",
       "parts": [
-        { "path": "firmware/bootloader.bin", "offset": 4096 },
-        { "path": "firmware/partition-table.bin", "offset": 32768 },
-        { "path": "firmware/audio-recorder.bin", "offset": 65536 }
+        { "path": "firmware/ESP32-TinyPico/bootloader.bin", "offset": 4096 },
+        { "path": "firmware/ESP32-TinyPico/partition-table.bin", "offset": 32768 },
+        { "path": "firmware/ESP32-TinyPico/audio-recorder.bin", "offset": 65536 }
       ]
     }
   ]

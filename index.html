@@ -67,12 +67,12 @@
       <h1>Instalador de Firmware – RetailMind</h1>
 
       <div class="instructions">
-        <h2>Instrucciones</h2>
+        <h2>Instrucciones generales</h2>
         <ol>
-          <li>Conectá tu dispositivo <strong>ESP32 PICO D4</strong> por USB a la computadora.</li>
+          <li>Conectá tu dispositivo ESP32 por USB a la computadora.</li>
           <li>Usá el navegador <strong>Chrome</strong> o <strong>Edge</strong> (otros no son compatibles).</li>
-          <li>Presioná el botón <em>Instalar Firmware</em> más abajo.</li>
-          <li>Seleccioná el puerto del dispositivo cuando te lo pida el navegador.</li>
+          <li>Presioná el botón <em>Instalar Firmware</em> correspondiente al modelo.</li>
+          <li>Seleccioná el puerto USB cuando el navegador lo solicite.</li>
           <li>Esperá a que el proceso termine sin desconectar el dispositivo.</li>
           <li>¡Listo! El firmware estará flasheado correctamente.</li>
         </ol>
@@ -81,22 +81,14 @@
       <div class="button-row">
         <h2>ESP32 TinyPico</h2>
         <esp-web-install-button manifest="manifest_esp32_tinypico.json"></esp-web-install-button>
-      
+
         <h2 style="margin-top: 3em;">ESP32 Común (WiFiScan)</h2>
         <esp-web-install-button manifest="manifest_esp32_wifiscan.json"></esp-web-install-button>
       </div>
-      
 
       <div class="footer">
         Desarrollado por <a href="https://devolut.tech" target="_blank">Devolut</a> | Basado en <a href="https://esphome.github.io/esp-web-tools/" target="_blank">ESP Web Tools</a>
       </div>
     </div>
-
-    <script>
-      // Obtener el manifest del query param
-      const params = new URLSearchParams(window.location.search);
-      const manifest = params.get("manifest") || "manifest_retailmind_i2s.json";
-      document.querySelector("esp-web-install-button").setAttribute("manifest", manifest);
-    </script>
   </body>
 </html>
