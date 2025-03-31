@@ -8,7 +8,7 @@ Este repositorio contiene una herramienta web para instalar el firmware del grab
 
 Accedé a la herramienta desde este enlace:
 
-👉 **[Instalar Firmware](https://mec.github.io/esp-web-tool-retailmind/install.html)**
+👉 **[Instalar Firmware](https://mecantronic.github.io/esp-web-tool-retailmind/)**
 
 > Compatible con navegadores basados en Chromium (Chrome, Edge). No funciona en Firefox o Safari.
 
@@ -19,13 +19,13 @@ Accedé a la herramienta desde este enlace:
 - Navegador: **Google Chrome** o **Microsoft Edge**
 - Sistema operativo: Windows, macOS o Linux
 - Conexión USB disponible
-- Dispositivo: **ESP32 PICO D4** con puerto USB
+- Dispositivo: **ESP32 PICO** con puerto USB
 
 ---
 
 ## 🔌 Instrucciones de uso
 
-1. Conectá tu dispositivo ESP32 PICO D4 a la computadora vía USB.
+1. Conectá tu dispositivo ESP32 PICO a la computadora vía USB.
 2. Accedé al enlace: [https://mec.github.io/esp-web-tool-retailmind/install.html](https://mec.github.io/esp-web-tool-retailmind/install.html)
 3. Presioná el botón `Instalar Firmware`.
 4. Seleccioná el puerto serie del ESP32 cuando el navegador lo solicite.
@@ -34,23 +34,9 @@ Accedé a la herramienta desde este enlace:
 
 ---
 
-## 📁 Estructura del repositorio
-├── firmware/ 
-│    │ 
-│    ├── bootloader.bin  
-│    ├── partition-table.bin  
-│    └── audio-recorder.bin 
-├── manifest_retailmind_i2s.json 
-├── index.html 
-├── install.html 
-└── logo.png
-
-
----
-
 ## 🧠 Sobre el manifest
 
-El archivo `manifest_retailmind_i2s.json` define:
+Los archivos `manifest_***.json` definen:
 - Los binarios necesarios para el dispositivo
 - Las ubicaciones (offsets) en memoria
 - La familia de chip compatible (`ESP32`)
