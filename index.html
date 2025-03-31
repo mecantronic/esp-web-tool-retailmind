@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Instalador RetailMind</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <style>
+      body {
+        font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI",
+          Roboto, Ubuntu, sans-serif;
+        padding: 0;
+        margin: 0;
+        background-color: #f4f4f4;
+        color: #222;
+      }
+      .container {
+        max-width: 700px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      .logo {
+        width: 180px;
+        margin: 20px auto;
+        display: block;
+      }
+      h1 {
+        text-align: center;
+        font-size: 1.8em;
+        margin-bottom: 0.2em;
+      }
+      .instructions {
+        margin-top: 2em;
+        padding: 16px;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+      .instructions ol {
+        padding-left: 1.5em;
+      }
+      .button-row {
+        text-align: center;
+        margin: 2em 0;
+      }
+      .footer {
+        margin-top: 48px;
+        text-align: center;
+        font-size: 0.9em;
+        color: #777;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background-color: #1e1e1e;
+          color: #ddd;
+        }
+        .instructions {
+          background: #2a2a2a;
+        }
+      }
+    </style>
+    <script type="module" src="https://unpkg.com/esp-web-tools@8.0.1/dist/web/install-button.js?module"></script>
+  </head>
+  <body>
+    <div class="container">
+      <img src="logo.png" alt="RetailMind Logo" class="logo" />
+      <h1>Instalador de Firmware – RetailMind</h1>
+
+      <div class="instructions">
+        <h2>Instrucciones</h2>
+        <ol>
+          <li>Conectá tu dispositivo <strong>ESP32 PICO D4</strong> por USB a la computadora.</li>
+          <li>Usá el navegador <strong>Chrome</strong> o <strong>Edge</strong> (otros no son compatibles).</li>
+          <li>Presioná el botón <em>Instalar Firmware</em> más abajo.</li>
+          <li>Seleccioná el puerto del dispositivo cuando te lo pida el navegador.</li>
+          <li>Esperá a que el proceso termine sin desconectar el dispositivo.</li>
+          <li>¡Listo! El firmware estará flasheado correctamente.</li>
+        </ol>
+      </div>
+
+      <div class="button-row">
+        <esp-web-install-button></esp-web-install-button>
+      </div>
+
+      <div class="footer">
+        Desarrollado por <a href="https://devolut.tech" target="_blank">Devolut</a> | Basado en <a href="https://esphome.github.io/esp-web-tools/" target="_blank">ESP Web Tools</a>
+      </div>
+    </div>
+
+    <script>
+      // Obtener el manifest del query param
+      const params = new URLSearchParams(window.location.search);
+      const manifest = params.get("manifest") || "manifest_retailmind_i2s.json";
+      document.querySelector("esp-web-install-button").setAttribute("manifest", manifest);
+    </script>
+  </body>
+</html>
