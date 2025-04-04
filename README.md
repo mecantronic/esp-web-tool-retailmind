@@ -1,6 +1,6 @@
 # RetailMind ESP32 Flasher
 
-Este repositorio contiene una herramienta web para instalar el firmware del grabador de audio **RetailMind** en dispositivos **ESP32 PICO**, directamente desde el navegador.
+Este repositorio contiene una herramienta web para instalar el firmware del grabador de audio **RetailMind** en dispositivos **ESP32**, directamente desde el navegador.
 
 ---
 
@@ -19,29 +19,34 @@ Accedé a la herramienta desde este enlace:
 - Navegador: **Google Chrome** o **Microsoft Edge**
 - Sistema operativo: Windows, macOS o Linux
 - Conexión USB disponible
-- Dispositivo: **ESP32 PICO** con puerto USB
+- Dispositivo: **ESP32**, incluyendo variantes como **ESP32 PICO D4** y **ESP32 TinyPico**
 
 ---
 
 ## 🔌 Instrucciones de uso
 
-1. Conectá tu dispositivo ESP32 PICO a la computadora vía USB.
-2. Accedé al enlace: [https://mec.github.io/esp-web-tool-retailmind/install.html](https://mec.github.io/esp-web-tool-retailmind/install.html)
-3. Presioná el botón `Instalar Firmware`.
-4. Seleccioná el puerto serie del ESP32 cuando el navegador lo solicite.
-5. Esperá a que el proceso termine (sin desconectar el dispositivo).
-6. ¡Listo! El firmware quedará flasheado y el dispositivo estará listo para ser usado.
+1. Conectá tu dispositivo ESP32 por USB a la computadora.
+2. Accedé al enlace: [https://mecantronic.github.io/esp-web-tool-retailmind/](https://mecantronic.github.io/esp-web-tool-retailmind/)
+3. Seleccioná la versión correspondiente del firmware en el desplegable.
+   - Versión: 1.0 (ESP32)
+   - Versión: 1.1 (ESP32 TinyPico)
+   - Versión: 1.2 (ESP32 TinyPico)
+4. Presioná el botón `Connect`.
+5. Seleccioná el puerto USB cuando el navegador lo solicite.
+6. Esperá a que el proceso termine (sin desconectar el dispositivo).
+7. ¡Listo! El firmware estará flasheado correctamente.
 
 ---
 
-## 🧠 Sobre el manifest
+## 🧠 Sobre los manifests
 
 Los archivos `manifest_***.json` definen:
+
 - Los binarios necesarios para el dispositivo
 - Las ubicaciones (offsets) en memoria
 - La familia de chip compatible (`ESP32`)
 
-Este archivo es usado por `ESP Web Tools` para automatizar el flasheo del firmware.
+Este archivo es utilizado por **ESP Web Tools** para automatizar el proceso de flasheo directamente desde el navegador.
 
 ---
 
@@ -49,7 +54,7 @@ Este archivo es usado por `ESP Web Tools` para automatizar el flasheo del firmwa
 
 - [ESP Web Tools](https://esphome.github.io/esp-web-tools/)
 - [ESP-IDF](https://docs.espressif.com/projects/esp-idf/en/latest/) + [FreeRTOS](https://www.freertos.org/)
-- [ESP32 PICO D4](https://www.espressif.com/en/products/socs/esp32/pico-d4)
+- Dispositivos: [ESP32 PICO D4](https://www.espressif.com/en/products/socs/esp32/pico-d4), ESP32 TinyPico
 
 ---
 
@@ -57,6 +62,7 @@ Este archivo es usado por `ESP Web Tools` para automatizar el flasheo del firmwa
 
 Firmware desarrollado por el equipo de [Devolut](https://devolut.tech/).  
 Web Installer basado en el trabajo de [ESPHome / balloob](https://github.com/balloob/squeezelite-esp32-install).
+
 
 ---
 
