@@ -1,0 +1,15 @@
+{
+    "name": "RetailMind – ESP32 TinyPico",
+    "version": "1.0.0",
+    "builds": [
+      {
+        "chipFamily": "ESP32",
+        "parts": [
+          { "path": "firmware/ESP32 TinyPico 1.2/bootloader.bin", "offset": 4096 },
+          { "path": "firmware/ESP32 TinyPico 1.2/partition-table.bin", "offset": 32768 },
+          { "path": "firmware/ESP32 TinyPico 1.2/audio-recorder.bin", "offset": 65536 }
+        ]
+      }
+    ]
+  }
+  
