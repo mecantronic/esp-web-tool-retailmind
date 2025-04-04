@@ -47,7 +47,7 @@
       select#board-select {
         font-size: 1rem;
         padding: 8px 12px;
-        width: 250px;
+        min-width: 360px;
         border-radius: 6px;
         margin-top: 10px;
       }
@@ -129,9 +129,27 @@
       const descriptionBox = document.getElementById('version-description');
 
       const descriptions = {
-        "manifest_esp32_tinypico_v1_1.json": "Versión 1.1 para retailmind-device. Contiene mejoras de compatibilidad y soporte extendido.",
-        "manifest_esp32_tinypico_v1_0.json": "Versión 1.0 para retailmind-device. Implementación inicial funcional.",
-        "manifest_esp32.json": "Versión 1.0 de test para ESP32 estándar. Útil para pruebas básicas de conectividad.",
+        "manifest_esp32_tinypico_v1_1.json": `
+          <strong>Versión 1.1 – retailmind-device</strong><br>
+          <ul>
+            <li>Feat: Mantener presionado para entrar en modo suspensión.</li>
+            <li>Feat: Envío por POST a un endpoint al finalizar la subida.</li>
+            <li>Feat: Subida de archivos optimizada.</li>
+            <li>Change: La grabación ya no comienza automáticamente al arrancar</li>
+          </ul>
+        `,
+        "manifest_esp32_tinypico_v1_0.json": `
+          <strong>Versión 1.0 – retailmind-device</strong><br>
+          <p>Primera versión funcional.</p>
+          <ul>
+            <li>Grabación y envío de audio</li>
+            <li>Integración con servidor</li>
+          </ul>
+        `,
+        "manifest_esp32.json": `
+          <strong>Versión 1.0 – ESP32 estándar (test)</strong><br>
+          <p>Versión de prueba para conectividad y flasheo.</p>
+        `,
       };
 
       function updateManifestAndDescription() {
@@ -139,7 +157,7 @@
         button.setAttribute('manifest', value);
 
         if (descriptions[value]) {
-          descriptionBox.textContent = descriptions[value];
+          descriptionBox.innerHTML = descriptions[value];
           descriptionBox.style.display = 'block';
         } else {
           descriptionBox.style.display = 'none';
