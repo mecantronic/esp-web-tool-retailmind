@@ -1,59 +1,106 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
   <head>
     <meta charset="utf-8" />
     <title>Instalador RetailMind</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
+    <meta name="description" content="Herramienta de instalación y configuración para dispositivos RetailMind" />
+    <link rel="icon" href="favicon.ico" type="image/x-icon" />
     <style>
+      /* Variables CSS */
+      :root {
+        --primary-color: #0275d8;
+        --primary-hover: #025aa5;
+        --success-color: #5cb85c;
+        --success-hover: #449d44;
+        --danger-color: #d9534f;
+        --danger-hover: #c9302c;
+        --disabled-color: #6c757d;
+        --light-bg: #f4f4f4;
+        --dark-bg: #1e1e1e;
+        --light-text: #222;
+        --dark-text: #ddd;
+        --light-card-bg: #fff;
+        --dark-card-bg: #2a2a2a;
+        --light-status-bg: #f8f9fa;
+        --dark-status-bg: #2c2c2c;
+        --border-radius: 8px;
+        --box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        --spacing-sm: 10px;
+        --spacing-md: 16px;
+        --spacing-lg: 24px;
+        --spacing-xl: 40px;
+      }
+      
+      /* Base styles */
       body {
         font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI",
           Roboto, Ubuntu, sans-serif;
         padding: 0;
         margin: 0;
-        background-color: #f4f4f4;
-        color: #222;
+        background-color: var(--light-bg);
+        color: var(--light-text);
+        line-height: 1.5;
       }
+      
       .container {
         max-width: 700px;
         margin: 0 auto;
-        padding: 24px;
+        padding: var(--spacing-lg);
       }
+      
+      /* Header styles */
       .logo {
         width: 100%;
         max-width: 650px;
-        margin: 40px auto 20px;
+        margin: var(--spacing-xl) auto var(--spacing-md);
         display: block;
       }
+      
       h1 {
         text-align: center;
         font-size: 1.8em;
         margin-bottom: 0.2em;
       }
-      .instructions {
-        margin-top: 2em;
-        padding: 16px;
-        background: #fff;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      
+      h2 {
+        text-align: center;
+        margin-top: 0;
+        margin-bottom: var(--spacing-md);
       }
+      
+      /* Card components */
+      .card {
+        margin-top: var(--spacing-lg);
+        padding: var(--spacing-md);
+        background: var(--light-card-bg);
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+      }
+      
+      /* Instructions section */
       .instructions ol {
         padding-left: 1.5em;
       }
-      .button-row {
+      
+      /* Firmware selection section */
+      .firmware-section {
         text-align: center;
-        margin: 2.5em 0;
+        margin: var(--spacing-xl) 0;
       }
+      
       select#board-select {
         font-size: 1rem;
         padding: 8px 12px;
         min-width: 360px;
         border-radius: 6px;
-        margin-top: 10px;
+        margin-top: var(--spacing-sm);
       }
+      
       .version-box {
-        margin: 20px auto;
-        padding: 16px;
+        margin: var(--spacing-md) auto;
+        padding: var(--spacing-md);
         max-width: 600px;
         background-color: #fff3cd;
         border-left: 5px solid #ffecb5;
@@ -62,24 +109,113 @@
         font-size: 0.95rem;
         display: none;
       }
+      
+      .esp-web-install-button-row {
+        margin-top: 1.5em;
+      }
+      
+      /* Config section */
+      .config-section {
+        margin-top: var(--spacing-xl);
+      }
+      
+      .config-buttons {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--spacing-md);
+      }
+      
+      .config-actions {
+        display: flex;
+        gap: var(--spacing-md);
+        margin-top: var(--spacing-md);
+      }
+      
+      /* Button styles */
+      .btn {
+        border: none;
+        padding: var(--spacing-sm) var(--spacing-md);
+        border-radius: 5px;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+      
+      .btn-primary {
+        background-color: var(--primary-color);
+        color: white;
+        width: 250px;
+      }
+      
+      .btn-primary:hover:not(:disabled) {
+        background-color: var(--primary-hover);
+      }
+      
+      .btn-success {
+        background-color: var(--success-color);
+        color: white;
+        width: 180px;
+      }
+      
+      .btn-success:hover:not(:disabled) {
+        background-color: var(--success-hover);
+      }
+      
+      .btn-danger {
+        background-color: var(--danger-color);
+        color: white;
+        width: 180px;
+      }
+      
+      .btn-danger:hover:not(:disabled) {
+        background-color: var(--danger-hover);
+      }
+      
+      .btn:disabled {
+        background-color: var(--disabled-color);
+        cursor: not-allowed;
+      }
+      
+      /* Status indicator */
+      .status-indicator {
+        margin-top: var(--spacing-md);
+        padding: var(--spacing-sm);
+        background-color: var(--light-status-bg);
+        border-radius: 5px;
+        font-size: 0.9rem;
+        text-align: center;
+        color: #495057;
+      }
+      
+      /* Footer */
       .footer {
-        margin-top: 48px;
+        margin-top: var(--spacing-xl);
         text-align: center;
         font-size: 0.9em;
         color: #777;
       }
+      
+      /* Dark mode support */
       @media (prefers-color-scheme: dark) {
         body {
-          background-color: #1e1e1e;
-          color: #ddd;
+          background-color: var(--dark-bg);
+          color: var(--dark-text);
         }
-        .instructions {
-          background: #2a2a2a;
+        
+        .card {
+          background: var(--dark-card-bg);
         }
+        
         .version-box {
           background-color: #4f4400;
           border-left-color: #f5c518;
           color: #f1e2a8;
+        }
+        
+        .status-indicator {
+          background-color: var(--dark-status-bg);
+          color: #adb5bd;
         }
       }
     </style>
@@ -90,7 +226,8 @@
       <img src="logo.png" alt="RetailMind Logo" class="logo" />
       <h1>Instalador de Firmware – RetailMind</h1>
 
-      <div class="instructions">
+      <!-- Instrucciones de instalación -->
+      <section class="card instructions">
         <h2>Instrucciones</h2>
         <ol>
           <li>Conectá tu dispositivo <strong>ESP32</strong> por USB a la computadora.</li>
@@ -101,9 +238,10 @@
           <li>Esperá a que finalice el proceso sin desconectar el dispositivo.</li>
           <li>¡Listo! Tu dispositivo estará flasheado y listo para usar.</li>
         </ol>
-      </div>
+      </section>
 
-      <div class="button-row">
+      <!-- Sección de selección de firmware -->
+      <section class="firmware-section">
         <h2>Seleccioná versión del firmware</h2>
         <select id="board-select">
           <option value="manifest_esp32_tinypico_v1_1.json">Versión: 1.1 (retailmind-device)</option>
@@ -113,22 +251,50 @@
 
         <div id="version-description" class="version-box"></div>
 
-        <p style="margin-top: 1.5em;">
+        <div class="esp-web-install-button-row">
           <esp-web-install-button></esp-web-install-button>
-        </p>
-      </div>
+        </div>
+      </section>
 
-      <div class="footer">
-        Desarrollado por <a href="https://devolut.tech" target="_blank">Devolut</a> | Basado en <a href="https://esphome.github.io/esp-web-tools/" target="_blank">ESP Web Tools</a>
-      </div>
+      <!-- Sección de modo configuración -->
+      <section class="card config-section">
+        <h2>Modo Configuración</h2>
+        <div class="config-buttons">
+          <button id="connect-serial" class="btn btn-primary">Conectar Puerto Serial</button>
+          
+          <div class="config-actions">
+            <button id="activate-config" class="btn btn-success" disabled>Activar Modo Config</button>
+            <button id="deactivate-config" class="btn btn-danger" disabled>Desactivar Modo Config</button>
+          </div>
+          
+          <div id="config-status" class="status-indicator">
+            Estado: Esperando conexión
+          </div>
+        </div>
+      </section>
+
+      <!-- Pie de página -->
+      <footer class="footer">
+        Desarrollado por <a href="https://devolut.tech" target="_blank" rel="noopener">Devolut</a> | 
+        Basado en <a href="https://esphome.github.io/esp-web-tools/" target="_blank" rel="noopener">ESP Web Tools</a>
+      </footer>
     </div>
 
     <script>
-      const button = document.querySelector('esp-web-install-button');
-      const select = document.getElementById('board-select');
-      const descriptionBox = document.getElementById('version-description');
-
-      const descriptions = {
+      // Referencias a elementos DOM
+      const espInstallButton = document.querySelector('esp-web-install-button');
+      const boardSelect = document.getElementById('board-select');
+      const versionDescription = document.getElementById('version-description');
+      const connectSerialBtn = document.getElementById('connect-serial');
+      const activateConfigBtn = document.getElementById('activate-config');
+      const deactivateConfigBtn = document.getElementById('deactivate-config');
+      const configStatusEl = document.getElementById('config-status');
+      
+      // Variables globales
+      const DEBUG_MODE = true; // Controla la verbosidad de los mensajes en consola
+      
+      // Descripciones de versiones
+      const firmwareDescriptions = {
         "manifest_esp32_tinypico_v1_1.json": `
           <strong>Versión 1.1 – retailmind-device</strong><br>
           <ul>
@@ -152,20 +318,427 @@
         `,
       };
 
-      function updateManifestAndDescription() {
-        const value = select.value;
-        button.setAttribute('manifest', value);
+      // Variables para la conexión serial
+      let serialPort = null;
+      let serialReader = null;
+      let readableStreamClosed = null;
+      let isConnected = false;
+      let isClosing = false;
+      let modeConfigActive = false;
+      
+      // Verificar si Web Serial API está disponible
+      const isWebSerialSupported = 'serial' in navigator;
+      
+      if (!isWebSerialSupported) {
+        configStatusEl.textContent = 'Estado: Web Serial API no soportada en este navegador';
+        connectSerialBtn.disabled = true;
+      }
 
-        if (descriptions[value]) {
-          descriptionBox.innerHTML = descriptions[value];
-          descriptionBox.style.display = 'block';
-        } else {
-          descriptionBox.style.display = 'none';
+      /**
+       * Elimina las secuencias de escape ANSI de un texto
+       * @param {string} text - Texto con posibles secuencias ANSI
+       * @returns {string} - Texto limpio sin secuencias ANSI
+       */
+      function stripAnsiEscapeCodes(text) {
+        // Esta expresión regular elimina todas las secuencias de escape ANSI comunes
+        return text.replace(/\x1B\[\d+(?:;\d+)*m/g, '')
+                  .replace(/\[\d+(?:;\d+)*m/g, ''); // Para formatos que no incluyen el escape \x1B
+      }
+
+      /**
+       * Log condicional para reducir mensajes en consola
+       * @param {string} type - Tipo de log (log, warn, error)
+       * @param {string} message - El mensaje a loguear
+       */
+      function debugLog(type, ...args) {
+        if (!DEBUG_MODE && type !== 'error') return;
+        
+        switch(type) {
+          case 'error':
+            console.error(...args);
+            break;
+          case 'warn':
+            console.warn(...args);
+            break;
+          default:
+            console.log(...args);
         }
       }
 
-      select.addEventListener('change', updateManifestAndDescription);
-      updateManifestAndDescription(); // Inicial
+      /**
+       * Actualiza el manifiesto y la descripción del firmware seleccionado
+       */
+      function updateFirmwareDescription() {
+        const selectedManifest = boardSelect.value;
+        espInstallButton.setAttribute('manifest', selectedManifest);
+
+        if (firmwareDescriptions[selectedManifest]) {
+          versionDescription.innerHTML = firmwareDescriptions[selectedManifest];
+          versionDescription.style.display = 'block';
+        } else {
+          versionDescription.style.display = 'none';
+        }
+      }
+
+      /**
+       * Maneja la conexión al puerto serial
+       */
+      async function handleSerialConnection() {
+        if (isConnected) {
+          await disconnectSerial();
+        } else {
+          await connectSerial();
+        }
+      }
+
+      /**
+       * Conecta al puerto serial
+       */
+      async function connectSerial() {
+        if (!isWebSerialSupported) return;
+        
+        try {
+          updateStatus('Solicitando puerto serial...');
+          
+          // Solicitar al usuario que seleccione un puerto serial
+          serialPort = await navigator.serial.requestPort();
+          
+          // Configurar la velocidad del puerto serial
+          await serialPort.open({ baudRate: 115200 });
+          
+          isConnected = true;
+          updateConnectionUI(true);
+          updateStatus('Conectado al puerto serial');
+          
+          // Iniciar la lectura del puerto serial
+          startSerialReading();
+          
+        } catch (error) {
+          debugLog('error', 'Error al conectar con el puerto serial:', error);
+          
+          if (error.name === 'NotFoundError') {
+            updateStatus('No se seleccionó ningún puerto');
+          } else {
+            updateStatus(`Error: ${error.message || 'Fallo al conectar con el puerto serial'}`);
+          }
+          
+          isConnected = false;
+          updateConnectionUI(false);
+        }
+      }
+
+      /**
+       * Desconecta del puerto serial, liberando correctamente los recursos
+       */
+      async function disconnectSerial() {
+        if (!serialPort) return;
+        
+        // Evitar múltiples llamadas concurrentes a disconnectSerial
+        if (isClosing) {
+          debugLog('log', 'Ya hay una operación de cierre en curso, esperando...');
+          updateStatus('Desconectando, por favor espera...');
+          return;
+        }
+        
+        isClosing = true;
+        updateConnectionUI(false);
+        
+        try {
+          // Si el modo config está activo, enviamos OFF antes de desconectar
+          if (modeConfigActive) {
+            try {
+              updateStatus('Desactivando Modo Config...');
+              await sendCommand('MODE_CONFIG OFF', false);
+              // Pequeña pausa para dar tiempo a que responda el dispositivo
+              await new Promise(resolve => setTimeout(resolve, 500));
+              modeConfigActive = false;
+            } catch (e) {
+              debugLog('warn', 'Error al desactivar Modo Config:', e);
+            }
+          }
+          
+          // Detener la lectura de datos si está activa
+          if (serialReader) {
+            try {
+              // Señalizar que ya no deseamos leer datos
+              await serialReader.cancel();
+              debugLog('log', 'Lector serial cancelado');
+            } catch (e) {
+              debugLog('warn', 'Error al cancelar el lector:', e);
+            }
+            
+            try {
+              // Esperar a que se complete el cierre de la stream si existe
+              if (readableStreamClosed) {
+                await readableStreamClosed.catch(e => debugLog('warn', 'Error al cerrar stream:', e));
+                debugLog('log', 'Stream cerrado correctamente');
+              }
+            } catch (e) {
+              debugLog('warn', 'Error esperando cierre de stream:', e);
+            }
+            
+            serialReader = null;
+            readableStreamClosed = null;
+          }
+          
+          // Cerrar el puerto
+          if (serialPort) {
+            try {
+              debugLog('log', 'Cerrando puerto serial...');
+              await serialPort.close();
+              debugLog('log', 'Puerto serial cerrado correctamente');
+            } catch (e) {
+              if (e.name === 'InvalidStateError' && e.message.includes('already in progress')) {
+                debugLog('warn', 'El puerto ya se está cerrando, esperando...');
+                // Esperar un tiempo para dar oportunidad a que se complete el cierre
+                await new Promise(resolve => setTimeout(resolve, 1000));
+              } else {
+                debugLog('warn', 'Error al cerrar el puerto:', e);
+              }
+            }
+          }
+          
+          serialPort = null;
+          isConnected = false;
+          
+          updateConnectionUI(false);
+          updateStatus('Desconectado del puerto serial');
+          
+        } catch (error) {
+          debugLog('error', 'Error al desconectar el puerto serial:', error);
+          updateStatus(`Error: ${error.message || 'Fallo al desconectar'}`);
+          
+          // Resetear el estado de la UI incluso si hay error
+          isConnected = false;
+          serialPort = null;
+          serialReader = null;
+          readableStreamClosed = null;
+          updateConnectionUI(false);
+        } finally {
+          // Restablecer el estado de cierre
+          isClosing = false;
+          modeConfigActive = false;
+          updateConnectionUI(false);
+        }
+      }
+
+      /**
+       * Inicia la lectura de datos del puerto serial
+       */
+      async function startSerialReading() {
+        if (!serialPort || !serialPort.readable) {
+          debugLog('error', 'El puerto serial no está disponible para lectura');
+          updateStatus('Error: Puerto serial no disponible');
+          await disconnectSerial(); // Desconectar y limpiar recursos
+          return;
+        }
+        
+        // Preparar para leer datos del puerto serial
+        const textDecoder = new TextDecoder();
+        let buffer = '';
+        
+        try {
+          serialReader = serialPort.readable.getReader();
+          
+          // Crear una promesa que se resolverá cuando se cierre la stream de lectura
+          readableStreamClosed = new Promise((resolve, reject) => {
+            // Este flujo se ejecuta cuando el lector se cancela
+            serialReader.closed.then(resolve).catch(reject);
+          });
+          
+          // Bucle de lectura
+          while (true) {
+            try {
+              const { value, done } = await serialReader.read();
+              
+              if (done) {
+                debugLog('log', 'La lectura del puerto serial finalizó');
+                break;
+              }
+              
+              // Procesar los datos recibidos
+              const textChunk = textDecoder.decode(value);
+              buffer += textChunk;
+              
+              // Buscar líneas completas
+              const lines = buffer.split('\n');
+              buffer = lines.pop() || ''; // Guardar la última línea incompleta
+              
+              // Procesar cada línea completa
+              for (const line of lines) {
+                if (line.trim()) {
+                  // Eliminar las secuencias de escape ANSI
+                  const cleanLine = stripAnsiEscapeCodes(line.trim());
+                  debugLog('log', 'RX:', cleanLine);
+                  
+                  // Detectar cambios en el estado del modo config
+                  if (cleanLine.includes('MODE_CONFIG: Starting mode_config')) {
+                    modeConfigActive = true;
+                    updateStatus('Modo Config ACTIVADO');
+                  } else if (cleanLine.includes('MODE_CONFIG: Stopping mode_config')) {
+                    modeConfigActive = false;
+                    updateStatus('Modo Config DESACTIVADO');
+                  }
+                }
+              }
+            } catch (readError) {
+              // Capturar errores durante la lectura individual
+              debugLog('error', 'Error durante la lectura:', readError);
+              updateStatus(`Error de lectura: ${readError.message}`);
+              
+              if (readError.name === 'NetworkError') {
+                // Si es un error de red, salir del bucle de lectura
+                debugLog('log', 'Dispositivo desconectado. Cerrando conexión...');
+                updateStatus('Dispositivo desconectado');
+                break;
+              }
+              
+              // Para otros errores, esperamos un momento antes de continuar
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+          }
+        } catch (error) {
+          debugLog('error', 'Error general durante la lectura del puerto serial:', error);
+          updateStatus(`Error: ${error.message || 'Fallo de comunicación'}`);
+        } finally {
+          // Limpiar recursos y actualizar UI
+          if (serialReader) {
+            try {
+              serialReader.releaseLock();
+            } catch (e) {
+              debugLog('error', 'Error al liberar el lector:', e);
+            }
+            serialReader = null;
+          }
+          
+          // Si llegamos aquí por un error, desconectamos completamente
+          if (isConnected) {
+            await disconnectSerial();
+          }
+        }
+      }
+
+      /**
+       * Envía un comando al dispositivo a través del puerto serial
+       * @param {string} command - El comando a enviar
+       * @param {boolean} updateUI - Si debe actualizarse la UI con el estado
+       * @returns {Promise<boolean>} Éxito o fracaso del envío
+       */
+      async function sendCommand(command, updateUI = true) {
+        if (!serialPort || !isConnected) {
+          updateStatus('No hay conexión serial activa');
+          return false;
+        }
+
+        try {
+          const encoder = new TextEncoder();
+          const writer = serialPort.writable.getWriter();
+          
+          // Registrar el comando enviado con prefijo TX
+          debugLog('log', 'TX:', command);
+          
+          // Enviar el comando con un salto de línea
+          await writer.write(encoder.encode(command + '\n'));
+          
+          // Importante: liberar el writer después de usarlo
+          writer.releaseLock();
+          
+          if (updateUI) {
+            updateStatus(`Comando "${command}" enviado`);
+          }
+          
+          // Actualizar el estado del modo config basado en el comando
+          if (command === 'MODE_CONFIG ON') {
+            modeConfigActive = true;
+          } else if (command === 'MODE_CONFIG OFF') {
+            modeConfigActive = false;
+          }
+          
+          return true;
+        } catch (error) {
+          debugLog('error', 'Error al enviar el comando:', error);
+          updateStatus(`Error: ${error.message || 'Fallo al enviar el comando'}`);
+          
+          // Si hay un error de red al enviar, desconectar completamente
+          if (error.name === 'NetworkError') {
+            await disconnectSerial();
+          }
+          
+          return false;
+        }
+      }
+
+      /**
+       * Actualiza el estado mostrado en la interfaz
+       * @param {string} message - El mensaje de estado
+       */
+      function updateStatus(message) {
+        configStatusEl.textContent = `Estado: ${message}`;
+      }
+
+      /**
+       * Actualiza los elementos de la UI según el estado de la conexión
+       * @param {boolean} connected - Si está conectado o no
+       */
+      function updateConnectionUI(connected) {
+        if (isClosing) {
+          connectSerialBtn.textContent = 'Desconectando...';
+          connectSerialBtn.disabled = true;
+        } else {
+          connectSerialBtn.textContent = connected ? 'Desconectar Puerto Serial' : 'Conectar Puerto Serial';
+          connectSerialBtn.disabled = false;
+        }
+        
+        activateConfigBtn.disabled = !connected || isClosing;
+        deactivateConfigBtn.disabled = !connected || isClosing;
+      }
+
+      // Manejadores de eventos
+      boardSelect.addEventListener('change', updateFirmwareDescription);
+      connectSerialBtn.addEventListener('click', handleSerialConnection);
+      
+      activateConfigBtn.addEventListener('click', async () => {
+        if (await sendCommand('MODE_CONFIG ON')) {
+          updateStatus('Activando Modo Config...');
+        }
+      });
+
+      deactivateConfigBtn.addEventListener('click', async () => {
+        if (await sendCommand('MODE_CONFIG OFF')) {
+          updateStatus('Desactivando Modo Config...');
+        }
+      });
+
+      // Limpiar recursos antes de salir de la página
+      window.addEventListener('beforeunload', () => {
+        if (isConnected && serialPort) {
+          // Si el modo config está activo, enviar OFF
+          if (modeConfigActive) {
+            try {
+              const encoder = new TextEncoder();
+              const writer = serialPort.writable.getWriter();
+              writer.write(encoder.encode('MODE_CONFIG OFF\n'));
+              writer.releaseLock();
+            } catch (e) {
+              debugLog('error', 'Error al enviar MODE_CONFIG OFF en beforeunload:', e);
+            }
+          }
+          
+          // Intentar desconectar de forma sincrónica para liberar el puerto
+          // Nota: Esto podría no completarse totalmente debido a la naturaleza de beforeunload
+          try {
+            if (serialReader) {
+              serialReader.cancel();
+            }
+            serialPort.close();
+          } catch (e) {
+            debugLog('error', 'Error al cerrar el puerto en beforeunload:', e);
+          }
+        }
+      });
+
+      // Inicialización
+      updateFirmwareDescription();
     </script>
   </body>
 </html>
