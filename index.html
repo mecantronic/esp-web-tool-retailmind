@@ -5,46 +5,58 @@
     <title>Instalador RetailMind</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
-    <meta name="description" content="Herramienta de instalación y configuración para dispositivos RetailMind" />
+    <meta name="description" content="Herramienta de instalación para dispositivos RetailMind" />
     <link rel="icon" href="favicon.ico" type="image/x-icon" />
     <link rel="stylesheet" href="styles.css" />
     <script type="module" src="https://unpkg.com/esp-web-tools@8.0.1/dist/web/install-button.js?module"></script>
+    <!-- Librería para convertir Markdown a HTML -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   </head>
   <body>
     <div class="container">
-      <img src="logo.png" alt="RetailMind Logo" class="logo" />
-      <h1>Instalador de Firmware – RetailMind</h1>
+      <header>
+        <img src="https://cdn.prod.website-files.com/63a5fe17ed59552c312b6980/63bec1ca5a430534eed4732d_devolut-logo%20v1.svg" alt="Devolut Logo" class="logo" />
+        <h1>Instalador de Firmware – RetailMind</h1>
+      </header>
 
-      <!-- Instrucciones de instalación -->
-      <section class="card instructions">
-        <h2>Instrucciones</h2>
-        <ol>
-          <li>Conectá tu dispositivo <strong>ESP32</strong> por USB a la computadora.</li>
-          <li>Asegurate de usar <strong>Google Chrome</strong> o <strong>Microsoft Edge</strong> (otros navegadores no son compatibles).</li>
-          <li>Elegí la versión de firmware adecuada en el menú desplegable.</li>
-          <li>Hacé clic en el botón <em>Connect</em>.</li>
-          <li>Seleccioná el puerto USB del dispositivo cuando lo solicite el navegador.</li>
-          <li>Esperá a que finalice el proceso sin desconectar el dispositivo.</li>
-          <li>¡Listo! Tu dispositivo estará flasheado y listo para usar.</li>
-        </ol>
-      </section>
-
-      <!-- Sección de selección de firmware -->
-      <section class="firmware-section">
-        <h2>Seleccioná versión del firmware</h2>
-        <select id="board-select">
-          <option value="manifest_esp32_tinypico_v1_1.json">Versión: 1.1 (retailmind-device)</option>
-          <option value="manifest_esp32_tinypico_v1_0.json">Versión: 1.0 (retailmind-device)</option>
-          <option value="manifest_esp32.json">Versión: 1.0 (ESP32 - test)</option>
-        </select>
-
-        <div id="version-description" class="version-box"></div>
-
-        <div class="esp-web-install-button-row">
-          <esp-web-install-button></esp-web-install-button>
-          <button id="config-button" class="btn btn-secondary">CONFIGURACION</button>
+      <main class="content-wrapper">
+        <!-- Panel de instrucciones colapsable -->
+        <div class="instructions-panel">
+          <button id="instructions-toggle" class="toggle-button">
+            <span class="toggle-icon">▼</span> Mostrar instrucciones
+          </button>
+          <div id="instructions-content" class="collapsible-content">
+            <!-- Aquí se cargará el contenido desde instrucciones.md -->
+            <div class="loading">Cargando instrucciones...</div>
+          </div>
         </div>
-      </section>
+
+        <!-- Panel principal de selección e instalación -->
+        <section class="card firmware-section">
+          <h2>Seleccioná versión del firmware</h2>
+          
+          <div class="firmware-content">
+            <div class="firmware-selection">
+              <select id="board-select">
+                <option value="firmware/ESP32 TinyPico 1.1/manifest.json">Versión: 1.1 (retailmind-device)</option>
+                <option value="firmware/ESP32 TinyPico 1.0/manifest.json">Versión: 1.0 (retailmind-device)</option>
+                <option value="firmware/ESP32/manifest.json">Versión: 1.0 (ESP32 - test)</option>
+              </select>
+              
+              <div class="esp-web-install-button-row">
+                <esp-web-install-button>
+                  <button slot="activate">INSTALAR</button>
+                  <span slot="unsupported">Tu navegador no es compatible.</span>
+                  <span slot="not-allowed">No puedes usar esto en HTTP.</span>
+                </esp-web-install-button>
+                <button id="config-button" class="btn btn-secondary">CONFIGURACIÓN</button>
+              </div>
+            </div>
+            
+            <div id="version-description" class="version-box"></div>
+          </div>
+        </section>
+      </main>
 
       <!-- Modal de Configuración -->
       <div id="config-modal" class="modal">
@@ -54,33 +66,55 @@
             <span class="close-modal">&times;</span>
           </div>
           <div class="modal-body">
-            <div class="config-buttons">
-              <button id="connect-serial" class="btn btn-primary">Conectar Puerto Serial</button>
-              
-              <div class="config-actions">
-                <button id="activate-config" class="btn btn-success" disabled>Activar Modo Config</button>
-                <button id="deactivate-config" class="btn btn-danger" disabled>Desactivar Modo Config</button>
+            <div class="config-columns">
+              <!-- Columna de acciones (sin botón conectar/desconectar) -->
+              <div class="config-column actions-column">
+                <div class="config-mode-toggle">
+                  <label class="switch">
+                    <input type="checkbox" id="config-mode-toggle" disabled>
+                    <span class="slider"></span>
+                  </label>
+                  <span class="toggle-label">Modo Config</span>
+                </div>
+                
                 <button id="read-config" class="btn btn-info" disabled>Leer Configuración</button>
+                
+                <div id="config-status" class="status-indicator">
+                  Estado: Esperando conexión USB
+                </div>
               </div>
               
-              <div id="config-status" class="status-indicator">
-                Estado: Esperando conexión
-              </div>
-              
-              <!-- Formulario de configuración -->
-              <div id="config-form" class="config-form">
-                <h3>Configuración del Dispositivo</h3>
-                <div class="form-group">
-                  <label for="deviceId">ID del Dispositivo:</label>
-                  <input type="text" id="deviceId" class="form-control" readonly>
-                </div>
-                <div class="form-group">
-                  <label for="wifi-ssid">SSID WiFi:</label>
-                  <input type="text" id="wifi-ssid" class="form-control" readonly>
-                </div>
-                <div class="form-group">
-                  <label for="wifi-password">Contraseña WiFi:</label>
-                  <input type="text" id="wifi-password" class="form-control" readonly>
+              <!-- Columna de formulario -->
+              <div class="config-column form-column">
+                <div id="config-form" class="config-form">
+                  <div class="form-group">
+                    <label for="deviceId">ID del Dispositivo:</label>
+                    <div class="input-group">
+                      <input type="text" id="deviceId" class="form-control" readonly>
+                      <button id="generate-uid" class="btn-icon" disabled title="Generar nuevo ID">
+                        🔁
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="wifi-ssid">SSID WiFi:</label>
+                    <input type="text" id="wifi-ssid" class="form-control" readonly>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="wifi-password">Contraseña WiFi:</label>
+                    <input type="text" id="wifi-password" class="form-control" readonly>
+                  </div>
+                  
+                  <div class="form-actions">
+                    <button id="edit-config" class="btn btn-secondary">
+                      <span class="edit-icon">✎</span> Editar
+                    </button>
+                    <button id="save-config" class="btn btn-primary" disabled>
+                      <span class="save-icon">✓</span> Guardar
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -88,7 +122,34 @@
         </div>
       </div>
 
-      <!-- Pie de página -->
+      <!-- Modal de confirmación -->
+      <div id="confirm-modal" class="confirm-modal">
+        <div class="confirm-content">
+          <div class="confirm-header">
+            <h3>Confirmar cambios</h3>
+          </div>
+          <div class="confirm-body">
+            <p>¿Estás seguro de que deseas guardar los cambios en la configuración?</p>
+            <p>El dispositivo se reconectará a la nueva red WiFi si los datos son modificados.</p>
+          </div>
+          <div class="confirm-footer">
+            <button id="confirm-cancel" class="btn btn-secondary">Cancelar</button>
+            <button id="confirm-save" class="btn btn-primary">Confirmar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alerta de navegador incompatible -->
+      <div id="browser-warning" class="browser-warning" style="display:none;">
+        <div class="warning-icon">⚠️</div>
+        <div class="warning-text">
+          <strong>Navegador no compatible detectado</strong>
+          <p>Esta herramienta solo funciona en Google Chrome o Microsoft Edge.</p>
+          <p>Por favor, abre esta página en uno de estos navegadores para continuar.</p>
+        </div>
+      </div>
+
+      <!-- Footer -->
       <footer class="footer">
         Desarrollado por <a href="https://devolut.tech" target="_blank" rel="noopener">Devolut</a> | 
         Basado en <a href="https://esphome.github.io/esp-web-tools/" target="_blank" rel="noopener">ESP Web Tools</a>
