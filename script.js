@@ -50,6 +50,9 @@ async function loadInstructions() {
     const markdown = await response.text();
     const htmlContent = marked.parse(markdown);
     instructionsContent.innerHTML = htmlContent;
+
+    // Configurar las secciones desplegables
+    setupInstructionSections();
   } catch (error) {
     console.error('Error al cargar instrucciones:', error);
     instructionsContent.innerHTML = `
@@ -57,6 +60,198 @@ async function loadInstructions() {
         <p>Error al cargar las instrucciones. Por favor, recarga la página.</p>
       </div>
     `;
+  }
+}
+
+// Función para convertir las secciones de instrucciones en desplegables
+function setupInstructionSections() {
+  // Esperar a que el contenido esté cargado
+  const checkContent = setInterval(() => {
+    const content = instructionsContent.querySelector('h1');
+    if (!content) return;
+    
+    clearInterval(checkContent);
+    
+    // Obtener todos los encabezados h2 que representan secciones
+    const sections = instructionsContent.querySelectorAll('h2');
+    
+    sections.forEach(section => {
+      // Crear un div para contener la sección
+      const sectionContainer = document.createElement('div');
+      sectionContainer.className = 'instruction-section';
+      
+      // Crear el botón desplegable
+      const toggleButton = document.createElement('button');
+      toggleButton.className = 'section-toggle-button';
+      toggleButton.innerHTML = `<span class="toggle-icon">▼</span> ${section.textContent}`;
+      
+      // Crear el contenedor para el contenido de la sección
+      const sectionContent = document.createElement('div');
+      sectionContent.className = 'section-content';
+      
+      // Mover el contenido de la sección al nuevo contenedor
+      let nextElem = section.nextElementSibling;
+      while (nextElem && nextElem.tagName !== 'H2') {
+        const tempElem = nextElem;
+        nextElem = nextElem.nextElementSibling;
+        sectionContent.appendChild(tempElem);
+      }
+      
+      // Agregar evento al botón
+      toggleButton.addEventListener('click', function() {
+        this.classList.toggle('active');
+        sectionContent.classList.toggle('active');
+        
+        // Actualizar el ícono
+        const icon = this.querySelector('.toggle-icon');
+        if (this.classList.contains('active')) {
+          icon.textContent = '▲';
+        } else {
+          icon.textContent = '▼';
+        }
+      });
+      
+      // Ensamblar la sección
+      sectionContainer.appendChild(toggleButton);
+      sectionContainer.appendChild(sectionContent);
+      
+      // Reemplazar el encabezado original con la nueva sección
+      section.parentNode.replaceChild(sectionContainer, section);
+    });
+    
+    // Abrir la primera sección por defecto
+    const firstSection = instructionsContent.querySelector('.section-toggle-button');
+    if (firstSection) {
+      firstSection.click();
+    }
+  }, 100);
+}
+
+// Función para cargar manifiestos de firmware con prioridad para retailmind-device y última versión arriba
+async function loadFirmwareManifests() {
+  try {
+    const boardSelect = document.getElementById('board-select');
+    boardSelect.innerHTML = '<option value="">Cargando versiones...</option>';
+    
+    console.log("Iniciando carga de manifiestos de firmware...");
+    
+    // Cargar la lista de directorios desde el archivo JSON
+    const dirListResponse = await fetch('firmware-list.json');
+    if (!dirListResponse.ok) {
+      throw new Error(`Error HTTP al cargar firmware-list.json: ${dirListResponse.status}`);
+    }
+    
+    const dirListData = await dirListResponse.json();
+    const directories = dirListData.directories || [];
+    
+    console.log("Directorios encontrados en firmware-list.json:", directories);
+    
+    // Array para almacenar la información de los manifiestos
+    let manifestsInfo = [];
+    
+    // Comprobamos cada directorio para un manifest.json
+    for (const dir of directories) {
+      try {
+        const manifestUrl = `${dir}/manifest.json`;
+        console.log(`Intentando cargar manifiesto desde: ${manifestUrl}`);
+        
+        const response = await fetch(manifestUrl);
+        if (!response.ok) {
+          console.warn(`No se pudo cargar el manifiesto en ${manifestUrl}: HTTP ${response.status}`);
+          continue;
+        }
+        
+        const manifest = await response.json();
+        console.log(`Manifiesto cargado desde ${dir}:`, manifest);
+        
+        // Obtener los valores name y version del manifiesto
+        const name = manifest.name || 'Sin nombre';
+        const version = manifest.version || 'Sin versión';
+        let chipFamily = '';
+        
+        // Intentar obtener chipFamily desde diferentes estructuras posibles
+        if (manifest.builds && manifest.builds.length > 0) {
+          chipFamily = manifest.builds[0].chipFamily || '';
+        }
+        
+        // Guardar la información para ordenar después
+        manifestsInfo.push({
+          url: manifestUrl,
+          name: name,
+          version: version,
+          chipFamily: chipFamily,
+          versionNum: parseVersion(version), // Convertir versión a número para ordenar
+          isRetailmind: name.toLowerCase().startsWith('retailmind-device') // Flag para priorizar
+        });
+      } catch (e) {
+        console.error(`Error al procesar manifiesto en ${dir}:`, e);
+      }
+    }
+    
+    // Ordenar los manifiestos primero por tipo (retailmind primero) y luego por versión (descendente)
+    manifestsInfo.sort((a, b) => {
+      // Primero comparar si es retailmind
+      if (a.isRetailmind && !b.isRetailmind) return -1;
+      if (!a.isRetailmind && b.isRetailmind) return 1;
+      
+      // Si ambos son del mismo tipo, ordenar por versión (descendente)
+      return b.versionNum - a.versionNum;
+    });
+    
+    // Limpiar el select
+    boardSelect.innerHTML = '';
+    
+    // Agregar las opciones ordenadas
+    if (manifestsInfo.length > 0) {
+      manifestsInfo.forEach(info => {
+        const option = document.createElement('option');
+        option.value = info.url;
+        option.textContent = `${info.name} v${info.version} ${info.chipFamily ? `(${info.chipFamily})` : ''}`;
+        boardSelect.appendChild(option);
+        console.log(`Opción añadida: ${option.textContent}`);
+      });
+      
+      // Actualizar la descripción con la primera opción (retailmind más reciente)
+      await updateFirmwareDescription();
+    } else {
+      console.error("No se encontraron manifiestos válidos");
+      boardSelect.innerHTML = '<option value="">No se encontraron versiones de firmware</option>';
+    }
+  } catch (error) {
+    console.error('Error al cargar manifiestos:', error);
+    boardSelect.innerHTML = `<option value="">Error: ${error.message}</option>`;
+  }
+}
+
+// Función auxiliar para convertir string de versión a número para ordenar
+function parseVersion(versionStr) {
+  try {
+    // Convertir "1.1" a 1.1 (número)
+    const parts = versionStr.split('.');
+    let result = 0;
+    for (let i = 0; i < parts.length; i++) {
+      result += parseFloat(parts[i]) / Math.pow(100, i);
+    }
+    return result;
+  } catch (e) {
+    console.warn(`Error al parsear versión ${versionStr}:`, e);
+    return 0; // Valor por defecto si hay error
+  }
+}
+
+// Función auxiliar para convertir string de versión a número para ordenar
+function parseVersion(versionStr) {
+  try {
+    // Convertir "1.1" a 1.1 (número)
+    const parts = versionStr.split('.');
+    let result = 0;
+    for (let i = 0; i < parts.length; i++) {
+      result += parseFloat(parts[i]) / Math.pow(100, i);
+    }
+    return result;
+  } catch (e) {
+    console.warn(`Error al parsear versión ${versionStr}:`, e);
+    return 0; // Valor por defecto si hay error
   }
 }
 
@@ -88,6 +283,12 @@ async function loadFirmwareDescription(manifestPath) {
 // Actualizar la descripción del firmware
 async function updateFirmwareDescription() {
   const selectedManifest = boardSelect.value;
+  
+  if (!selectedManifest) {
+    versionDescription.style.display = 'none';
+    return;
+  }
+  
   espInstallButton.setAttribute('manifest', selectedManifest);
 
   versionDescription.innerHTML = '<div class="loading">Cargando descripción...</div>';
@@ -610,6 +811,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // Cargar instrucciones desde archivo markdown
   loadInstructions();
   
-  // Inicializar descripción del firmware
-  updateFirmwareDescription();
+  // Cargar manifiestos de firmware dinámicamente
+  loadFirmwareManifests();
 });

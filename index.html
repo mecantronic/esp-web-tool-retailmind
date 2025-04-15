@@ -26,7 +26,6 @@
             <span class="toggle-icon">▼</span> Mostrar instrucciones
           </button>
           <div id="instructions-content" class="collapsible-content">
-            <!-- Aquí se cargará el contenido desde instrucciones.md -->
             <div class="loading">Cargando instrucciones...</div>
           </div>
         </div>
@@ -38,9 +37,7 @@
           <div class="firmware-content">
             <div class="firmware-selection">
               <select id="board-select">
-                <option value="firmware/ESP32 TinyPico 1.1/manifest.json">Versión: 1.1 (retailmind-device)</option>
-                <option value="firmware/ESP32 TinyPico 1.0/manifest.json">Versión: 1.0 (retailmind-device)</option>
-                <option value="firmware/ESP32/manifest.json">Versión: 1.0 (ESP32 - test)</option>
+                <!-- Las opciones se cargarán dinámicamente desde las carpetas -->
               </select>
               
               <div class="esp-web-install-button-row">
@@ -54,6 +51,33 @@
             </div>
             
             <div id="version-description" class="version-box"></div>
+          </div>
+        </section>
+        
+        <!-- Sección de posibles problemas -->
+        <section class="card troubleshooting-section">
+          <h2>Posibles problemas</h2>
+          
+          <div class="troubleshooting-content">
+            <div class="troubleshooting-column">
+              <h3>Instalación</h3>
+              <ul>
+                <li>Si no aparece ningún puerto al hacer clic en "INSTALAR", asegurate de que el dispositivo esté correctamente conectado.</li>
+                <li>Si la instalación falla, intentá reiniciar el dispositivo y recargar la página.</li>
+                <li>En Windows, es posible que necesites instalar los <a href="https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers" target="_blank" rel="noopener">drivers CP210x</a>.</li>
+              </ul>
+            </div>
+            
+            <div class="troubleshooting-column">
+              <h3>Configuración</h3>
+              <ul>
+                <li>Asegurate de que el dispositivo este encendido y despierto. En caso contrario presionar el boton RESET.</li>
+                <li>Si no podés entrar en <strong>Modo Config</strong>, asegurate de que el firmware se haya instalado correctamente.</li>
+                <li>Si la lectura de configuración falla, intentá desconectar y volver a conectar el dispositivo.</li>
+                <li>Si la configuración no se guarda correctamente, verificá que los datos WiFi sean válidos.</li>
+                <li>Asegurate de desactivar el <strong>Modo Config</strong> antes de desconectar físicamente el dispositivo.</li>
+              </ul>
+            </div>
           </div>
         </section>
       </main>
@@ -151,7 +175,7 @@
 
       <!-- Footer -->
       <footer class="footer">
-        Desarrollado por <a href="https://devolut.tech" target="_blank" rel="noopener">Devolut</a> | 
+        Desarrollado y mantenido por <a href="https://mecantronic.com.ar" target="_blank" rel="noopener">Mecantronic S.A</a> | 
         Basado en <a href="https://esphome.github.io/esp-web-tools/" target="_blank" rel="noopener">ESP Web Tools</a>
       </footer>
     </div>

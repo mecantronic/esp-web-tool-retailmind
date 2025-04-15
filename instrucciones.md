@@ -1,6 +1,6 @@
 # Instrucciones de instalación - RetailMind
 
-Sigue estos pasos para instalar el firmware en tu dispositivo RetailMind:
+Sigue estos pasos para instalar el firmware en tu dispositivo RetailMind y configurarlo correctamente:
 
 ## Requisitos previos
 - Dispositivo **ESP32** (compatible con ESP32 PICO D4).
@@ -14,11 +14,26 @@ Sigue estos pasos para instalar el firmware en tu dispositivo RetailMind:
 3. Hacé clic en **INSTALAR**.
 4. Cuando el navegador lo solicite, seleccioná el puerto USB del dispositivo.
 5. Esperá a que finalice el proceso sin desconectar el dispositivo.
-6. ¡Listo! Tu dispositivo estará flasheado y listo para usar.
+6. ¡Listo! Tu dispositivo estará instalado y listo para configurar.
 
-## Posibles problemas
+## Configuración del dispositivo
 
-- Si no aparece ningún puerto al hacer clic en "INSTALAR", asegurate de que el dispositivo esté correctamente conectado.
-- Si la instalación falla, intentá reiniciar el dispositivo y recargar la página.
-- En Windows, es posible que necesites instalar los [drivers CP210x](https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers).
+Una vez instalado el firmware, podés configurar tu dispositivo RetailMind:
 
+1. Hacé clic en el botón **CONFIGURACIÓN**.
+2. Cuando el navegador lo solicite, seleccioná el puerto USB del dispositivo.
+3. Una vez conectado, activá el **Modo Config** usando el interruptor.
+4. Hacé clic en **Leer Configuración** para obtener la configuración actual.
+5. Para modificar la configuración:
+   - Hacé clic en el botón **Editar**
+   - Modificá los campos de SSID WiFi y Contraseña WiFi
+   - Si necesitás un nuevo ID de dispositivo, hacé clic en el botón 🔁
+   - Hacé clic en **Guardar** y confirmá los cambios
+6. El dispositivo guardará la configuración y, si cambiaste los datos WiFi, intentará conectarse a la nueva red.
+7. Cuando termines, desactivá el **Modo Config** antes de desconectar el dispositivo.
+
+## Campos de configuración
+
+- **ID del Dispositivo**: Identificador único para tu dispositivo RetailMind. No lo modifiques a menos que sea necesario.
+- **SSID WiFi**: Nombre de la red WiFi a la que se conectará el dispositivo.
+- **Contraseña WiFi**: Contraseña de la red WiFi.

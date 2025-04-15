@@ -134,6 +134,50 @@ h2 {
   padding: var(--spacing-md);
 }
 
+/* Secciones desplegables en instrucciones */
+.instruction-section {
+  margin-bottom: var(--spacing-md);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  background-color: white;
+  border: 1px solid #e9ecef;
+}
+
+.section-toggle-button {
+  width: 100%;
+  padding: 10px 15px;
+  background-color: #e9ecef;
+  color: var(--devolut-blue);
+  border: none;
+  text-align: left;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: background-color 0.3s;
+}
+
+.section-toggle-button:hover {
+  background-color: #dee2e6;
+}
+
+.section-toggle-button.active {
+  background-color: #d6e4ff;
+}
+
+.section-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+  padding: 0 var(--spacing-md);
+}
+
+.section-content.active {
+  max-height: 1000px; /* Ajustar según sea necesario */
+  padding: var(--spacing-md);
+}
+
 .loading {
   text-align: center;
   padding: var(--spacing-md);
@@ -324,6 +368,58 @@ esp-web-install-button::part(button):hover {
 
 #config-button:hover:not(:disabled) {
   background-color: var(--success-hover);
+}
+
+/* Sección de posibles problemas */
+.troubleshooting-section {
+  margin-top: var(--spacing-lg);
+}
+
+.troubleshooting-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+@media (min-width: 768px) {
+  .troubleshooting-content {
+    flex-direction: row;
+  }
+  
+  .troubleshooting-column {
+    flex: 1;
+  }
+}
+
+.troubleshooting-column h3 {
+  color: var(--devolut-blue);
+  text-align: left;
+  margin-top: 0;
+  font-size: 1.2rem;
+  margin-bottom: var(--spacing-md);
+}
+
+.troubleshooting-column ul {
+  padding-left: 1.5em;
+  margin-top: 0;
+}
+
+.troubleshooting-column ul li {
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.troubleshooting-column ul li:last-child {
+  margin-bottom: 0;
+}
+
+.troubleshooting-column ul li a {
+  color: var(--devolut-blue);
+  text-decoration: none;
+}
+
+.troubleshooting-column ul li a:hover {
+  text-decoration: underline;
 }
 
 /* Modal de configuración */
