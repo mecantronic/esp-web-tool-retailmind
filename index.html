@@ -1,171 +1,185 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
   <head>
     <meta charset="utf-8" />
     <title>Instalador RetailMind</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
-    <style>
-      body {
-        font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI",
-          Roboto, Ubuntu, sans-serif;
-        padding: 0;
-        margin: 0;
-        background-color: #f4f4f4;
-        color: #222;
-      }
-      .container {
-        max-width: 700px;
-        margin: 0 auto;
-        padding: 24px;
-      }
-      .logo {
-        width: 100%;
-        max-width: 650px;
-        margin: 40px auto 20px;
-        display: block;
-      }
-      h1 {
-        text-align: center;
-        font-size: 1.8em;
-        margin-bottom: 0.2em;
-      }
-      .instructions {
-        margin-top: 2em;
-        padding: 16px;
-        background: #fff;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      }
-      .instructions ol {
-        padding-left: 1.5em;
-      }
-      .button-row {
-        text-align: center;
-        margin: 2.5em 0;
-      }
-      select#board-select {
-        font-size: 1rem;
-        padding: 8px 12px;
-        min-width: 360px;
-        border-radius: 6px;
-        margin-top: 10px;
-      }
-      .version-box {
-        margin: 20px auto;
-        padding: 16px;
-        max-width: 600px;
-        background-color: #fff3cd;
-        border-left: 5px solid #ffecb5;
-        border-radius: 6px;
-        color: #664d03;
-        font-size: 0.95rem;
-        display: none;
-      }
-      .footer {
-        margin-top: 48px;
-        text-align: center;
-        font-size: 0.9em;
-        color: #777;
-      }
-      @media (prefers-color-scheme: dark) {
-        body {
-          background-color: #1e1e1e;
-          color: #ddd;
-        }
-        .instructions {
-          background: #2a2a2a;
-        }
-        .version-box {
-          background-color: #4f4400;
-          border-left-color: #f5c518;
-          color: #f1e2a8;
-        }
-      }
-    </style>
+    <meta name="description" content="Herramienta de instalación para dispositivos RetailMind" />
+    <link rel="icon" href="favicon.ico" type="image/x-icon" />
+    <link rel="stylesheet" href="styles.css" />
     <script type="module" src="https://unpkg.com/esp-web-tools@8.0.1/dist/web/install-button.js?module"></script>
+    <!-- Librería para convertir Markdown a HTML -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   </head>
   <body>
     <div class="container">
-      <img src="logo.png" alt="RetailMind Logo" class="logo" />
-      <h1>Instalador de Firmware – RetailMind</h1>
+      <header>
+        <img src="https://cdn.prod.website-files.com/63a5fe17ed59552c312b6980/63bec1ca5a430534eed4732d_devolut-logo%20v1.svg" alt="Devolut Logo" class="logo" />
+        <h1>Instalador de Firmware – RetailMind</h1>
+      </header>
 
-      <div class="instructions">
-        <h2>Instrucciones</h2>
-        <ol>
-          <li>Conectá tu dispositivo <strong>ESP32</strong> por USB a la computadora.</li>
-          <li>Asegurate de usar <strong>Google Chrome</strong> o <strong>Microsoft Edge</strong> (otros navegadores no son compatibles).</li>
-          <li>Elegí la versión de firmware adecuada en el menú desplegable.</li>
-          <li>Hacé clic en el botón <em>Connect</em>.</li>
-          <li>Seleccioná el puerto USB del dispositivo cuando lo solicite el navegador.</li>
-          <li>Esperá a que finalice el proceso sin desconectar el dispositivo.</li>
-          <li>¡Listo! Tu dispositivo estará flasheado y listo para usar.</li>
-        </ol>
+      <main class="content-wrapper">
+        <!-- Panel de instrucciones colapsable -->
+        <div class="instructions-panel">
+          <button id="instructions-toggle" class="toggle-button">
+            <span class="toggle-icon">▼</span> Mostrar instrucciones
+          </button>
+          <div id="instructions-content" class="collapsible-content">
+            <div class="loading">Cargando instrucciones...</div>
+          </div>
+        </div>
+
+        <!-- Panel principal de selección e instalación -->
+        <section class="card firmware-section">
+          <h2>Seleccioná versión del firmware</h2>
+          
+          <div class="firmware-content">
+            <div class="firmware-selection">
+              <select id="board-select">
+                <!-- Las opciones se cargarán dinámicamente desde las carpetas -->
+              </select>
+              
+              <div class="esp-web-install-button-row">
+                <esp-web-install-button>
+                  <button slot="activate">INSTALAR</button>
+                  <span slot="unsupported">Tu navegador no es compatible.</span>
+                  <span slot="not-allowed">No puedes usar esto en HTTP.</span>
+                </esp-web-install-button>
+                <button id="config-button" class="btn btn-secondary">CONFIGURACIÓN</button>
+              </div>
+            </div>
+            
+            <div id="version-description" class="version-box"></div>
+          </div>
+        </section>
+        
+        <!-- Sección de posibles problemas -->
+        <section class="card troubleshooting-section">
+          <h2>Posibles problemas</h2>
+          
+          <div class="troubleshooting-content">
+            <div class="troubleshooting-column">
+              <h3>Instalación</h3>
+              <ul>
+                <li>Si no aparece ningún puerto al hacer clic en "INSTALAR", asegurate de que el dispositivo esté correctamente conectado.</li>
+                <li>Si la instalación falla, intentá reiniciar el dispositivo y recargar la página.</li>
+                <li>En Windows, es posible que necesites instalar los <a href="https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers" target="_blank" rel="noopener">drivers CP210x</a>.</li>
+              </ul>
+            </div>
+            
+            <div class="troubleshooting-column">
+              <h3>Configuración</h3>
+              <ul>
+                <li>Asegurate de que el dispositivo este encendido y despierto. En caso contrario presionar el boton RESET.</li>
+                <li>Si no podés entrar en <strong>Modo Config</strong>, asegurate de que el firmware se haya instalado correctamente.</li>
+                <li>Si la lectura de configuración falla, intentá desconectar y volver a conectar el dispositivo.</li>
+                <li>Si la configuración no se guarda correctamente, verificá que los datos WiFi sean válidos.</li>
+                <li>Asegurate de desactivar el <strong>Modo Config</strong> antes de desconectar físicamente el dispositivo.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <!-- Modal de Configuración -->
+      <div id="config-modal" class="modal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2>Modo Configuración</h2>
+            <span class="close-modal">&times;</span>
+          </div>
+          <div class="modal-body">
+            <div class="config-columns">
+              <!-- Columna de acciones (sin botón conectar/desconectar) -->
+              <div class="config-column actions-column">
+                <div class="config-mode-toggle">
+                  <label class="switch">
+                    <input type="checkbox" id="config-mode-toggle" disabled>
+                    <span class="slider"></span>
+                  </label>
+                  <span class="toggle-label">Modo Config</span>
+                </div>
+                
+                <button id="read-config" class="btn btn-info" disabled>Leer Configuración</button>
+                
+                <div id="config-status" class="status-indicator">
+                  Estado: Esperando conexión USB
+                </div>
+              </div>
+              
+              <!-- Columna de formulario -->
+              <div class="config-column form-column">
+                <div id="config-form" class="config-form">
+                  <div class="form-group">
+                    <label for="deviceId">ID del Dispositivo:</label>
+                    <div class="input-group">
+                      <input type="text" id="deviceId" class="form-control" readonly>
+                      <button id="generate-uid" class="btn-icon" disabled title="Generar nuevo ID">
+                        🔁
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="wifi-ssid">SSID WiFi:</label>
+                    <input type="text" id="wifi-ssid" class="form-control" readonly>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="wifi-password">Contraseña WiFi:</label>
+                    <input type="text" id="wifi-password" class="form-control" readonly>
+                  </div>
+                  
+                  <div class="form-actions">
+                    <button id="edit-config" class="btn btn-secondary">
+                      <span class="edit-icon">✎</span> Editar
+                    </button>
+                    <button id="save-config" class="btn btn-primary" disabled>
+                      <span class="save-icon">✓</span> Guardar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="button-row">
-        <h2>Seleccioná versión del firmware</h2>
-        <select id="board-select">
-          <option value="manifest_esp32_tinypico_v1_1.json">Versión: 1.1 (retailmind-device)</option>
-          <option value="manifest_esp32_tinypico_v1_0.json">Versión: 1.0 (retailmind-device)</option>
-          <option value="manifest_esp32.json">Versión: 1.0 (ESP32 - test)</option>
-        </select>
-
-        <div id="version-description" class="version-box"></div>
-
-        <p style="margin-top: 1.5em;">
-          <esp-web-install-button></esp-web-install-button>
-        </p>
+      <!-- Modal de confirmación -->
+      <div id="confirm-modal" class="confirm-modal">
+        <div class="confirm-content">
+          <div class="confirm-header">
+            <h3>Confirmar cambios</h3>
+          </div>
+          <div class="confirm-body">
+            <p>¿Estás seguro de que deseas guardar los cambios en la configuración?</p>
+            <p>El dispositivo se reconectará a la nueva red WiFi si los datos son modificados.</p>
+          </div>
+          <div class="confirm-footer">
+            <button id="confirm-cancel" class="btn btn-secondary">Cancelar</button>
+            <button id="confirm-save" class="btn btn-primary">Confirmar</button>
+          </div>
+        </div>
       </div>
 
-      <div class="footer">
-        Desarrollado por <a href="https://devolut.tech" target="_blank">Devolut</a> | Basado en <a href="https://esphome.github.io/esp-web-tools/" target="_blank">ESP Web Tools</a>
+      <!-- Alerta de navegador incompatible -->
+      <div id="browser-warning" class="browser-warning" style="display:none;">
+        <div class="warning-icon">⚠️</div>
+        <div class="warning-text">
+          <strong>Navegador no compatible detectado</strong>
+          <p>Esta herramienta solo funciona en Google Chrome o Microsoft Edge.</p>
+          <p>Por favor, abre esta página en uno de estos navegadores para continuar.</p>
+        </div>
       </div>
+
+      <!-- Footer -->
+      <footer class="footer">
+        Desarrollado y mantenido por <a href="https://mecantronic.com.ar" target="_blank" rel="noopener">Mecantronic S.A</a> | 
+        Basado en <a href="https://esphome.github.io/esp-web-tools/" target="_blank" rel="noopener">ESP Web Tools</a>
+      </footer>
     </div>
-
-    <script>
-      const button = document.querySelector('esp-web-install-button');
-      const select = document.getElementById('board-select');
-      const descriptionBox = document.getElementById('version-description');
-
-      const descriptions = {
-        "manifest_esp32_tinypico_v1_1.json": `
-          <strong>Versión 1.1 – retailmind-device</strong><br>
-          <ul>
-            <li>Feat: Mantener presionado para entrar en modo suspensión.</li>
-            <li>Feat: Envío por POST a un endpoint al finalizar la subida.</li>
-            <li>Feat: Subida de archivos optimizada.</li>
-            <li>Change: La grabación ya no comienza automáticamente al arrancar</li>
-          </ul>
-        `,
-        "manifest_esp32_tinypico_v1_0.json": `
-          <strong>Versión 1.0 – retailmind-device</strong><br>
-          <p>Primera versión funcional.</p>
-          <ul>
-            <li>Grabación y envío de audio</li>
-            <li>Integración con servidor</li>
-          </ul>
-        `,
-        "manifest_esp32.json": `
-          <strong>Versión 1.0 – ESP32 estándar (test)</strong><br>
-          <p>Versión de prueba para conectividad y flasheo.</p>
-        `,
-      };
-
-      function updateManifestAndDescription() {
-        const value = select.value;
-        button.setAttribute('manifest', value);
-
-        if (descriptions[value]) {
-          descriptionBox.innerHTML = descriptions[value];
-          descriptionBox.style.display = 'block';
-        } else {
-          descriptionBox.style.display = 'none';
-        }
-      }
-
-      select.addEventListener('change', updateManifestAndDescription);
-      updateManifestAndDescription(); // Inicial
-    </script>
+    
+    <script src="script.js"></script>
   </body>
 </html>
