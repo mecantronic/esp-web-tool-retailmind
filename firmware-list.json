@@ -1,0 +1,8 @@
+{
+    "directories": [
+      "firmware/esp32-test",
+      "firmware/retailmind-device_v1_0",
+      "firmware/retailmind-device_v1_1",
+      "firmware/retailmind-device_v1_2"
+    ]
+  }
