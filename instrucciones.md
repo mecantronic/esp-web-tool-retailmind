@@ -1,4 +1,4 @@
-# Instrucciones de instalación - RetailMind
+# Instrucciones de instalación
 
 Sigue estos pasos para instalar el firmware en tu dispositivo RetailMind y configurarlo correctamente:
 

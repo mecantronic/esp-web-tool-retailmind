@@ -638,6 +638,7 @@ async function sendCommand(command, updateUI = true) {
       waitingForConfigResponse = true;
     } else if (command.startsWith('CONFIG_WRITE')) {
       waitingForWriteResponse = true;
+      updateStatus('Configuración guardada correctamente', 'success');
     }
     
     await writer.write(new TextEncoder().encode(command + '\n'));
@@ -722,7 +723,7 @@ async function saveConfig() {
   
   // Enviar comando
   updateStatus('Guardando configuración...', 'connecting');
-  return await sendCommand(`CONFIG_WRITE ${configJSON}`, false);
+  return await sendCommand(`CONFIG_WRITE ${configJSON}`, false);  // Para implementar en el futuro
 }
 
 // ===== EVENTOS =====
