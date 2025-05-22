@@ -455,7 +455,7 @@ async function openModal() {
   }
 
   // Iniciar el intervalo para solicitar el estado de la batería
-  batteryStatusInterval = setInterval(requestBatteryStatus, 60000); // Cada 1 minuto
+  batteryStatusInterval = setInterval(requestBatteryStatus, 20000); // Cada 1 minuto
   requestBatteryStatus(); // Llamar inmediatamente al abrir el modal
 }
 
@@ -539,7 +539,7 @@ async function disconnectSerial() {
   }
 }
 
-// Iniciar lectura del puerto serial
+// Modificar la función `startSerialReading` para procesar el porcentaje de batería
 async function startSerialReading() {
   if (!serialPort?.readable) {
     console.error('El puerto serial no está disponible para lectura');
@@ -606,11 +606,11 @@ async function startSerialReading() {
           }
           
           // Procesar respuestas de estado de batería
-          if (cleanLine.includes('"battery":')) {
+          if (cleanLine.includes('"battery_status_percentage":')) {
             try {
               const batteryData = JSON.parse(cleanLine);
-              if (batteryData.battery) {
-                updateBatteryIndicator(batteryData.battery);
+              if (batteryData.battery_status_percentage !== undefined) {
+                updateBatteryIndicator(batteryData.battery_status_percentage);
               }
             } catch (e) {
               console.error('Error al procesar estado de batería:', e);
@@ -754,6 +754,12 @@ async function saveConfig() {
   // Enviar comando
   updateStatus('Guardando configuración...', 'connecting');
   return await sendCommand(`CONFIG_WRITE ${configJSON}`, false);
+}
+
+// Modificar la función `updateBatteryIndicator` para manejar el porcentaje de batería
+function updateBatteryIndicator(percentage) {
+  const batteryIndicator = document.getElementById('battery-indicator');
+  batteryIndicator.textContent = `🔋${percentage}%`;
 }
 
 // ===== EVENTOS =====
