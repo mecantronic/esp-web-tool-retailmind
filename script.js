@@ -1,858 +1,1368 @@
-// Referencias a elementos DOM
-const espInstallButton = document.querySelector('esp-web-install-button');
-const boardSelect = document.getElementById('board-select');
-const versionDescription = document.getElementById('version-description');
-const configButton = document.getElementById('config-button');
-const configModal = document.getElementById('config-modal');
-const closeModal = document.querySelector('.close-modal');
-const configModeToggle = document.getElementById('config-mode-toggle');
-const readConfigBtn = document.getElementById('read-config');
-const configStatusEl = document.getElementById('config-status');
-const configFormEl = document.getElementById('config-form');
-const deviceIdInput = document.getElementById('deviceId');
-const wifiSsidInput = document.getElementById('wifi-ssid');
-const wifiPasswordInput = document.getElementById('wifi-password');
-const audioFormatSelect = document.getElementById('audio-format');
-const editConfigBtn = document.getElementById('edit-config');
-const saveConfigBtn = document.getElementById('save-config');
-const generateUidBtn = document.getElementById('generate-uid');
+/**
+ * RetailMind Firmware Installer
+ * Main application script for ESP32 firmware installation and configuration
+ */
 
-// Referencias a elementos de instrucciones
-const instructionsToggle = document.getElementById('instructions-toggle');
-const instructionsContent = document.getElementById('instructions-content');
-const browserWarning = document.getElementById('browser-warning');
+// =============================================================================
+// CONSTANTS AND CONFIGURATION
+// =============================================================================
 
-// Referencias adicionales para el modal de confirmación
-const confirmModal = document.getElementById('confirm-modal');
-const confirmSaveBtn = document.getElementById('confirm-save');
-const confirmCancelBtn = document.getElementById('confirm-cancel');
+const CONFIG = {
+  SERIAL_BAUD_RATE: 115200,
+  BATTERY_UPDATE_INTERVAL: 20000, // 20 seconds
+  CONFIG_TIMEOUT: 5000,
+  INSTRUCTION_CHECK_INTERVAL: 100,
+  DEVICE_RESTART_DELAY: 5000,
+  FIRMWARE_LIST_FILE: 'firmware-list.json',
+  INSTRUCTIONS_FILE: 'instrucciones.md'
+};
 
-// Variables globales
-let serialPort = null;
-let serialReader = null;
-let readableStreamClosed = null;
-let isConnected = false;
-let isClosing = false;
-let modeConfigActive = false;
-let waitingForConfigResponse = false;
-let waitingForWriteResponse = false;
-let isEditing = false;
+const SERIAL_COMMANDS = {
+  MODE_CONFIG_ON: 'MODE_CONFIG ON',
+  MODE_CONFIG_OFF: 'MODE_CONFIG OFF',
+  CONFIG_READ: 'CONFIG_READ',
+  CONFIG_WRITE: 'CONFIG_WRITE',
+  BATTERY_STATUS: 'BATTERY_STATUS',
+  RESET: 'RESET'
+};
 
-// Variable para almacenar el intervalo de actualización de batería
-let batteryStatusInterval = null;
+const STATUS_TYPES = {
+  INFO: 'info',
+  CONNECTING: 'connecting',
+  ERROR: 'error',
+  SUCCESS: 'success'
+};
 
-// ===== FUNCIONES DE CARGA DE CONTENIDO =====
+// =============================================================================
+// DOM ELEMENT REFERENCES
+// =============================================================================
 
-// Cargar instrucciones desde archivo markdown
-async function loadInstructions() {
-  try {
-    const response = await fetch('instrucciones.md');
-    if (!response.ok) {
-      throw new Error(`Error HTTP: ${response.status}`);
-    }
+class DOMElements {
+  constructor() {
+    // Main interface elements
+    this.espInstallButton = document.querySelector('esp-web-install-button');
+    this.boardSelect = document.getElementById('board-select');
+    this.versionDescription = document.getElementById('version-description');
+    this.configButton = document.getElementById('config-button');
     
-    const markdown = await response.text();
-    const htmlContent = marked.parse(markdown);
-    instructionsContent.innerHTML = htmlContent;
-
-    // Configurar las secciones desplegables
-    setupInstructionSections();
-  } catch (error) {
-    console.error('Error al cargar instrucciones:', error);
-    instructionsContent.innerHTML = `
-      <div class="error-loading">
-        <p>Error al cargar las instrucciones. Por favor, recarga la página.</p>
-      </div>
-    `;
+    // Modal elements
+    this.configModal = document.getElementById('config-modal');
+    this.closeModal = document.querySelector('.close-modal');
+    this.batteryIndicator = document.getElementById('battery-indicator');
+    
+    // Configuration elements
+    this.configModeToggle = document.getElementById('config-mode-toggle');
+    this.readConfigBtn = document.getElementById('read-config');
+    this.configStatusEl = document.getElementById('config-status');
+    this.configFormEl = document.getElementById('config-form');
+    
+    // Form inputs
+    this.deviceIdInput = document.getElementById('deviceId');
+    this.wifiSsidInput = document.getElementById('wifi-ssid');
+    this.wifiPasswordInput = document.getElementById('wifi-password');
+    this.audioFormatSelect = document.getElementById('audio-format');
+    
+    // Action buttons
+    this.editConfigBtn = document.getElementById('edit-config');
+    this.saveConfigBtn = document.getElementById('save-config');
+    this.generateUidBtn = document.getElementById('generate-uid');
+    
+    // Instructions elements
+    this.instructionsToggle = document.getElementById('instructions-toggle');
+    this.instructionsContent = document.getElementById('instructions-content');
+    
+    // Confirmation modal elements
+    this.confirmModal = document.getElementById('confirm-modal');
+    this.confirmSaveBtn = document.getElementById('confirm-save');
+    this.confirmCancelBtn = document.getElementById('confirm-cancel');
+    
+    // Warning elements
+    this.browserWarning = document.getElementById('browser-warning');
   }
 }
 
-// Función para convertir las secciones de instrucciones en desplegables
-function setupInstructionSections() {
-  // Esperar a que el contenido esté cargado
-  const checkContent = setInterval(() => {
-    const content = instructionsContent.querySelector('h1');
-    if (!content) return;
+// =============================================================================
+// APPLICATION STATE
+// =============================================================================
+
+class ApplicationState {
+  constructor() {
+    this.serialPort = null;
+    this.serialReader = null;
+    this.readableStreamClosed = null;
+    this.isConnected = false;
+    this.isClosing = false;
+    this.modeConfigActive = false;
+    this.waitingForConfigResponse = false;
+    this.waitingForWriteResponse = false;
+    this.isEditing = false;
+    this.batteryStatusInterval = null;
+  }
+
+  reset() {
+    this.serialPort = null;
+    this.serialReader = null;
+    this.readableStreamClosed = null;
+    this.isConnected = false;
+    this.isClosing = false;
+    this.modeConfigActive = false;
+    this.waitingForConfigResponse = false;
+    this.waitingForWriteResponse = false;
+    this.isEditing = false;
+    this.clearBatteryInterval();
+  }
+
+  clearBatteryInterval() {
+    if (this.batteryStatusInterval) {
+      clearInterval(this.batteryStatusInterval);
+      this.batteryStatusInterval = null;
+    }
+  }
+}
+
+// =============================================================================
+// UTILITY FUNCTIONS
+// =============================================================================
+
+class Utils {
+  /**
+   * Generate a UUID v4
+   * @returns {string} UUID string
+   */
+  static generateUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+
+  /**
+   * Parse version string to number for sorting
+   * @param {string} versionStr - Version string (e.g., "1.2.3")
+   * @returns {number} Numeric version for comparison
+   */
+  static parseVersion(versionStr) {
+    try {
+      const parts = versionStr.split('.');
+      let result = 0;
+      for (let i = 0; i < parts.length; i++) {
+        result += parseFloat(parts[i]) / Math.pow(100, i);
+      }
+      return result;
+    } catch (error) {
+      console.warn(`Error parsing version ${versionStr}:`, error);
+      return 0;
+    }
+  }
+
+  /**
+   * Remove ANSI escape codes from text
+   * @param {string} text - Text with potential ANSI codes
+   * @returns {string} Clean text
+   */
+  static stripAnsiEscapeCodes(text) {
+    return text.replace(/\x1B\[\d+(?:;\d+)*m/g, '')
+               .replace(/\[\d+(?:;\d+)*m/g, '');
+  }
+
+  /**
+   * Check if browser supports Web Serial API
+   * @returns {object} Browser compatibility info
+   */
+  static checkBrowserCompatibility() {
+    const hasWebSerial = 'serial' in navigator;
+    const isChrome = /Chrome/.test(navigator.userAgent) && !/Edg/.test(navigator.userAgent);
+    const isEdge = /Edg/.test(navigator.userAgent);
     
-    clearInterval(checkContent);
-    
-    // Obtener todos los encabezados h2 que representan secciones
-    const sections = instructionsContent.querySelectorAll('h2');
-    
-    sections.forEach(section => {
-      // Crear un div para contener la sección
-      const sectionContainer = document.createElement('div');
-      sectionContainer.className = 'instruction-section';
-      
-      // Crear el botón desplegable
-      const toggleButton = document.createElement('button');
-      toggleButton.className = 'section-toggle-button';
-      toggleButton.innerHTML = `<span class="toggle-icon">▼</span> ${section.textContent}`;
-      
-      // Crear el contenedor para el contenido de la sección
-      const sectionContent = document.createElement('div');
-      sectionContent.className = 'section-content';
-      
-      // Mover el contenido de la sección al nuevo contenedor
-      let nextElem = section.nextElementSibling;
-      while (nextElem && nextElem.tagName !== 'H2') {
-        const tempElem = nextElem;
-        nextElem = nextElem.nextElementSibling;
-        sectionContent.appendChild(tempElem);
+    return {
+      isSupported: hasWebSerial && (isChrome || isEdge),
+      hasWebSerial,
+      isChrome,
+      isEdge
+    };
+  }
+
+  /**
+   * Delay execution for specified milliseconds
+   * @param {number} ms - Milliseconds to wait
+   * @returns {Promise} Promise that resolves after delay
+   */
+  static delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+}
+
+// =============================================================================
+// CONTENT LOADER
+// =============================================================================
+
+class ContentLoader {
+  constructor(dom) {
+    this.dom = dom;
+  }
+
+  /**
+   * Load instructions from markdown file
+   */
+  async loadInstructions() {
+    try {
+      const response = await fetch(CONFIG.INSTRUCTIONS_FILE);
+      if (!response.ok) {
+        throw new Error(`HTTP Error: ${response.status}`);
       }
       
-      // Agregar evento al botón
-      toggleButton.addEventListener('click', function() {
-        this.classList.toggle('active');
-        sectionContent.classList.toggle('active');
-        
-        // Actualizar el ícono
-        const icon = this.querySelector('.toggle-icon');
-        if (this.classList.contains('active')) {
-          icon.textContent = '▲';
-        } else {
-          icon.textContent = '▼';
-        }
-      });
+      const markdown = await response.text();
+      const htmlContent = marked.parse(markdown);
+      this.dom.instructionsContent.innerHTML = htmlContent;
+
+      this.setupInstructionSections();
+    } catch (error) {
+      console.error('Error loading instructions:', error);
+      this.dom.instructionsContent.innerHTML = `
+        <div class="error-loading">
+          <p>Error al cargar las instrucciones. Por favor, recarga la página.</p>
+        </div>
+      `;
+    }
+  }
+
+  /**
+   * Convert instruction sections to collapsible format
+   */
+  setupInstructionSections() {
+    const checkContent = setInterval(() => {
+      const content = this.dom.instructionsContent.querySelector('h1');
+      if (!content) return;
       
-      // Ensamblar la sección
-      sectionContainer.appendChild(toggleButton);
-      sectionContainer.appendChild(sectionContent);
-      
-      // Reemplazar el encabezado original con la nueva sección
+      clearInterval(checkContent);
+      this.createCollapsibleSections();
+    }, CONFIG.INSTRUCTION_CHECK_INTERVAL);
+  }
+
+  /**
+   * Create collapsible sections from h2 headers
+   */
+  createCollapsibleSections() {
+    const sections = this.dom.instructionsContent.querySelectorAll('h2');
+    
+    sections.forEach(section => {
+      const sectionContainer = this.createSectionContainer(section);
       section.parentNode.replaceChild(sectionContainer, section);
     });
     
-    // Abrir la primera sección por defecto
-    const firstSection = instructionsContent.querySelector('.section-toggle-button');
+    // Open first section by default
+    const firstSection = this.dom.instructionsContent.querySelector('.section-toggle-button');
     if (firstSection) {
       firstSection.click();
     }
-  }, 100);
-}
+  }
 
-// Función para cargar manifiestos de firmware con prioridad para retailmind-device y última versión arriba
-async function loadFirmwareManifests() {
-  try {
-    const boardSelect = document.getElementById('board-select');
-    boardSelect.innerHTML = '<option value="">Cargando versiones...</option>';
+  /**
+   * Create a collapsible section container
+   * @param {HTMLElement} section - Section header element
+   * @returns {HTMLElement} Section container
+   */
+  createSectionContainer(section) {
+    const sectionContainer = document.createElement('div');
+    sectionContainer.className = 'instruction-section';
     
-    console.log("Iniciando carga de manifiestos de firmware...");
+    const toggleButton = document.createElement('button');
+    toggleButton.className = 'section-toggle-button';
+    toggleButton.innerHTML = `<span class="toggle-icon">▼</span> ${section.textContent}`;
     
-    // Cargar la lista de directorios desde el archivo JSON
-    const dirListResponse = await fetch('firmware-list.json');
-    if (!dirListResponse.ok) {
-      throw new Error(`Error HTTP al cargar firmware-list.json: ${dirListResponse.status}`);
+    const sectionContent = document.createElement('div');
+    sectionContent.className = 'section-content';
+    
+    // Move section content to new container
+    let nextElem = section.nextElementSibling;
+    while (nextElem && nextElem.tagName !== 'H2') {
+      const tempElem = nextElem;
+      nextElem = nextElem.nextElementSibling;
+      sectionContent.appendChild(tempElem);
     }
     
-    const dirListData = await dirListResponse.json();
-    const directories = dirListData.directories || [];
+    // Add toggle functionality
+    toggleButton.addEventListener('click', () => {
+      this.toggleSection(toggleButton, sectionContent);
+    });
     
-    console.log("Directorios encontrados en firmware-list.json:", directories);
+    sectionContainer.appendChild(toggleButton);
+    sectionContainer.appendChild(sectionContent);
     
-    // Array para almacenar la información de los manifiestos
-    let manifestsInfo = [];
+    return sectionContainer;
+  }
+
+  /**
+   * Toggle section visibility
+   * @param {HTMLElement} button - Toggle button
+   * @param {HTMLElement} content - Section content
+   */
+  toggleSection(button, content) {
+    button.classList.toggle('active');
+    content.classList.toggle('active');
     
-    // Comprobamos cada directorio para un manifest.json
+    const icon = button.querySelector('.toggle-icon');
+    icon.textContent = button.classList.contains('active') ? '▲' : '▼';
+  }
+
+  /**
+   * Load firmware manifests from directories
+   */
+  async loadFirmwareManifests() {
+    try {
+      this.dom.boardSelect.innerHTML = '<option value="">Cargando versiones...</option>';
+      console.log("Loading firmware manifests...");
+      
+      const directories = await this.loadDirectoryList();
+      const manifestsInfo = await this.loadManifestData(directories);
+      
+      this.populateFirmwareSelect(manifestsInfo);
+      await this.updateFirmwareDescription();
+      
+    } catch (error) {
+      console.error('Error loading manifests:', error);
+      this.dom.boardSelect.innerHTML = `<option value="">Error: ${error.message}</option>`;
+    }
+  }
+
+  /**
+   * Load directory list from JSON file
+   * @returns {Array} Array of directory paths
+   */
+  async loadDirectoryList() {
+    const response = await fetch(CONFIG.FIRMWARE_LIST_FILE);
+    if (!response.ok) {
+      throw new Error(`HTTP Error loading ${CONFIG.FIRMWARE_LIST_FILE}: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data.directories || [];
+  }
+
+  /**
+   * Load manifest data from directories
+   * @param {Array} directories - Array of directory paths
+   * @returns {Array} Array of manifest information
+   */
+  async loadManifestData(directories) {
+    const manifestsInfo = [];
+    
     for (const dir of directories) {
       try {
         const manifestUrl = `${dir}/manifest.json`;
-        console.log(`Intentando cargar manifiesto desde: ${manifestUrl}`);
+        const manifest = await this.loadSingleManifest(manifestUrl);
         
-        const response = await fetch(manifestUrl);
-        if (!response.ok) {
-          console.warn(`No se pudo cargar el manifiesto en ${manifestUrl}: HTTP ${response.status}`);
-          continue;
+        if (manifest) {
+          manifestsInfo.push(this.processManifestData(manifest, manifestUrl));
         }
-        
-        const manifest = await response.json();
-        console.log(`Manifiesto cargado desde ${dir}:`, manifest);
-        
-        // Obtener los valores name y version del manifiesto
-        const name = manifest.name || 'Sin nombre';
-        const version = manifest.version || 'Sin versión';
-        let chipFamily = '';
-        
-        // Intentar obtener chipFamily desde diferentes estructuras posibles
-        if (manifest.builds && manifest.builds.length > 0) {
-          chipFamily = manifest.builds[0].chipFamily || '';
-        }
-        
-        // Guardar la información para ordenar después
-        manifestsInfo.push({
-          url: manifestUrl,
-          name: name,
-          version: version,
-          chipFamily: chipFamily,
-          versionNum: parseVersion(version), // Convertir versión a número para ordenar
-          isRetailmind: name.toLowerCase().startsWith('retailmind-device') // Flag para priorizar
-        });
-      } catch (e) {
-        console.error(`Error al procesar manifiesto en ${dir}:`, e);
+      } catch (error) {
+        console.error(`Error processing manifest in ${dir}:`, error);
       }
     }
     
-    // Ordenar los manifiestos primero por tipo (retailmind primero) y luego por versión (descendente)
-    manifestsInfo.sort((a, b) => {
-      // Primero comparar si es retailmind
+    return this.sortManifests(manifestsInfo);
+  }
+
+  /**
+   * Load a single manifest file
+   * @param {string} manifestUrl - URL of manifest file
+   * @returns {Object|null} Manifest data or null if failed
+   */
+  async loadSingleManifest(manifestUrl) {
+    console.log(`Loading manifest from: ${manifestUrl}`);
+    
+    const response = await fetch(manifestUrl);
+    if (!response.ok) {
+      console.warn(`Could not load manifest at ${manifestUrl}: HTTP ${response.status}`);
+      return null;
+    }
+    
+    const manifest = await response.json();
+    console.log(`Manifest loaded from ${manifestUrl}:`, manifest);
+    return manifest;
+  }
+
+  /**
+   * Process manifest data into standardized format
+   * @param {Object} manifest - Raw manifest data
+   * @param {string} manifestUrl - Manifest URL
+   * @returns {Object} Processed manifest info
+   */
+  processManifestData(manifest, manifestUrl) {
+    const name = manifest.name || 'Unnamed';
+    const version = manifest.version || 'No version';
+    let chipFamily = '';
+    
+    if (manifest.builds && manifest.builds.length > 0) {
+      chipFamily = manifest.builds[0].chipFamily || '';
+    }
+    
+    return {
+      url: manifestUrl,
+      name,
+      version,
+      chipFamily,
+      versionNum: Utils.parseVersion(version),
+      isRetailmind: name.toLowerCase().startsWith('retailmind-device')
+    };
+  }
+
+  /**
+   * Sort manifests by priority (retailmind first) and version (descending)
+   * @param {Array} manifestsInfo - Array of manifest info objects
+   * @returns {Array} Sorted manifest info
+   */
+  sortManifests(manifestsInfo) {
+    return manifestsInfo.sort((a, b) => {
+      // Prioritize retailmind devices
       if (a.isRetailmind && !b.isRetailmind) return -1;
       if (!a.isRetailmind && b.isRetailmind) return 1;
       
-      // Si ambos son del mismo tipo, ordenar por versión (descendente)
+      // Sort by version (descending)
       return b.versionNum - a.versionNum;
     });
+  }
+
+  /**
+   * Populate firmware selection dropdown
+   * @param {Array} manifestsInfo - Sorted manifest info
+   */
+  populateFirmwareSelect(manifestsInfo) {
+    this.dom.boardSelect.innerHTML = '';
     
-    // Limpiar el select
-    boardSelect.innerHTML = '';
-    
-    // Agregar las opciones ordenadas
     if (manifestsInfo.length > 0) {
       manifestsInfo.forEach(info => {
         const option = document.createElement('option');
         option.value = info.url;
         option.textContent = `${info.name} v${info.version} ${info.chipFamily ? `(${info.chipFamily})` : ''}`;
-        boardSelect.appendChild(option);
-        console.log(`Opción añadida: ${option.textContent}`);
+        this.dom.boardSelect.appendChild(option);
+        console.log(`Option added: ${option.textContent}`);
       });
-      
-      // Actualizar la descripción con la primera opción (retailmind más reciente)
-      await updateFirmwareDescription();
     } else {
-      console.error("No se encontraron manifiestos válidos");
-      boardSelect.innerHTML = '<option value="">No se encontraron versiones de firmware</option>';
+      console.error("No valid manifests found");
+      this.dom.boardSelect.innerHTML = '<option value="">No se encontraron versiones de firmware</option>';
     }
-  } catch (error) {
-    console.error('Error al cargar manifiestos:', error);
-    boardSelect.innerHTML = `<option value="">Error: ${error.message}</option>`;
   }
-}
 
-// Función auxiliar para convertir string de versión a número para ordenar
-function parseVersion(versionStr) {
-  try {
-    // Convertir "1.1" a 1.1 (número)
-    const parts = versionStr.split('.');
-    let result = 0;
-    for (let i = 0; i < parts.length; i++) {
-      result += parseFloat(parts[i]) / Math.pow(100, i);
+  /**
+   * Load firmware description from README file
+   * @param {string} manifestPath - Path to manifest file
+   * @returns {string} HTML description
+   */
+  async loadFirmwareDescription(manifestPath) {
+    try {
+      const lastSlashIndex = manifestPath.lastIndexOf('/');
+      const firmwareDir = lastSlashIndex !== -1 ? 
+        manifestPath.substring(0, lastSlashIndex) : 
+        manifestPath;
+      
+      const descriptionPath = `${firmwareDir}/README.md`;
+      
+      const response = await fetch(descriptionPath);
+      if (!response.ok) {
+        throw new Error(`HTTP Error: ${response.status}`);
+      }
+      
+      const markdown = await response.text();
+      return marked.parse(markdown);
+    } catch (error) {
+      console.error(`Error loading description for ${manifestPath}:`, error);
+      return `<div class="error-loading">No se pudo cargar la descripción para esta versión.</div>`;
     }
-    return result;
-  } catch (e) {
-    console.warn(`Error al parsear versión ${versionStr}:`, e);
-    return 0; // Valor por defecto si hay error
   }
-}
 
-// Función para cargar descripción del firmware desde archivo markdown
-async function loadFirmwareDescription(manifestPath) {
-  try {
-    // La ruta ya contiene la carpeta, así que solo necesitamos extraer el directorio
-    const lastSlashIndex = manifestPath.lastIndexOf('/');
-    // Si no hay slash, usamos la ruta completa
-    const firmwareDir = lastSlashIndex !== -1 ? 
-      manifestPath.substring(0, lastSlashIndex) : 
-      manifestPath;
+  /**
+   * Update firmware description display
+   */
+  async updateFirmwareDescription() {
+    const selectedManifest = this.dom.boardSelect.value;
     
-    const descriptionPath = `${firmwareDir}/README.md`;
-    
-    const response = await fetch(descriptionPath);
-    if (!response.ok) {
-      throw new Error(`Error HTTP: ${response.status}`);
+    if (!selectedManifest) {
+      this.dom.versionDescription.style.display = 'none';
+      return;
     }
     
-    const markdown = await response.text();
-    return marked.parse(markdown);
-  } catch (error) {
-    console.error(`Error al cargar descripción para ${manifestPath}:`, error);
-    return `<div class="error-loading">No se pudo cargar la descripción para esta versión.</div>`;
-  }
-}
-
-// Actualizar la descripción del firmware
-async function updateFirmwareDescription() {
-  const selectedManifest = boardSelect.value;
-  
-  if (!selectedManifest) {
-    versionDescription.style.display = 'none';
-    return;
-  }
-  
-  espInstallButton.setAttribute('manifest', selectedManifest);
-
-  versionDescription.innerHTML = '<div class="loading">Cargando descripción...</div>';
-  versionDescription.style.display = 'block';
-  
-  try {
-    const htmlContent = await loadFirmwareDescription(selectedManifest);
-    versionDescription.innerHTML = htmlContent;
-  } catch (error) {
-    versionDescription.innerHTML = '<div class="error-loading">Error al cargar la descripción.</div>';
-  }
-}
-
-// ===== FUNCIONES DE UI =====
-
-// Verificación de navegador compatible
-function checkBrowserCompatibility() {
-  const hasWebSerial = 'serial' in navigator;
-  const isChrome = /Chrome/.test(navigator.userAgent) && !/Edg/.test(navigator.userAgent);
-  const isEdge = /Edg/.test(navigator.userAgent);
-  
-  if (!hasWebSerial || (!isChrome && !isEdge)) {
-    browserWarning.style.display = 'flex';
+    this.dom.espInstallButton.setAttribute('manifest', selectedManifest);
+    this.dom.versionDescription.innerHTML = '<div class="loading">Cargando descripción...</div>';
+    this.dom.versionDescription.style.display = 'block';
     
-    // Deshabilitar botones
-    const installButtons = document.querySelectorAll('esp-web-install-button button, #config-button');
-    installButtons.forEach(button => {
+    try {
+      const htmlContent = await this.loadFirmwareDescription(selectedManifest);
+      this.dom.versionDescription.innerHTML = htmlContent;
+    } catch (error) {
+      this.dom.versionDescription.innerHTML = '<div class="error-loading">Error al cargar la descripción.</div>';
+    }
+  }
+}
+
+// =============================================================================
+// UI MANAGER
+// =============================================================================
+
+class UIManager {
+  constructor(dom, state) {
+    this.dom = dom;
+    this.state = state;
+  }
+
+  /**
+   * Check browser compatibility and show warning if needed
+   */
+  checkBrowserCompatibility() {
+    const compatibility = Utils.checkBrowserCompatibility();
+    
+    if (!compatibility.isSupported) {
+      this.dom.browserWarning.style.display = 'flex';
+      this.disableButtons();
+    }
+  }
+
+  /**
+   * Disable buttons for incompatible browsers
+   */
+  disableButtons() {
+    const buttons = document.querySelectorAll('esp-web-install-button button, #config-button');
+    buttons.forEach(button => {
       button.disabled = true;
       button.title = "Navegador no compatible. Use Chrome o Edge.";
     });
   }
-}
 
-// Manejar el panel colapsable de instrucciones
-function toggleInstructions() {
-  const isActive = instructionsContent.classList.contains('active');
-  
-  if (isActive) {
-    instructionsContent.classList.remove('active');
-    instructionsToggle.classList.remove('active');
-    instructionsToggle.innerHTML = '<span class="toggle-icon">▼</span> Mostrar instrucciones';
-  } else {
-    instructionsContent.classList.add('active');
-    instructionsToggle.classList.add('active');
-    instructionsToggle.innerHTML = '<span class="toggle-icon">▲</span> Ocultar instrucciones';
-  }
-}
-
-// Actualizar estado en la UI
-function updateStatus(message, type = 'info') {
-  configStatusEl.textContent = `Estado: ${message}`;
-  
-  // Quitar todas las clases de estado
-  configStatusEl.classList.remove('connecting', 'error', 'success');
-  
-  // Añadir clase según tipo de mensaje
-  if (type === 'connecting') {
-    configStatusEl.classList.add('connecting');
-  } else if (type === 'error') {
-    configStatusEl.classList.add('error');
-  } else if (type === 'success') {
-    configStatusEl.classList.add('success');
-  }
-}
-
-// Actualizar UI según estado de conexión
-function updateConnectionUI(connected) {
-  // Actualizar estado del toggle de modo configuración
-  configModeToggle.disabled = !connected;
-  
-  // Mostrar/ocultar formulario según estado de conexión
-  configFormEl.style.opacity = connected ? '1' : '0.6';
-  
-  // Actualizar botones de edición
-  editConfigBtn.disabled = !connected || !modeConfigActive;
-  
-  // Actualizar UI para botones relacionados con modo config
-  updateModeConfigUI(modeConfigActive);
-}
-
-// Actualizar UI según modo config
-function updateModeConfigUI(active) {
-  configModeToggle.checked = active;
-  readConfigBtn.disabled = !active || !isConnected || isClosing;
-  editConfigBtn.disabled = !active || !isConnected || isClosing;
-}
-
-// Habilitar/deshabilitar modo edición
-function toggleEditMode(enable) {
-  isEditing = enable;
-  
-  const formInputs = document.querySelectorAll('#config-form .form-control');
-  formInputs.forEach(input => {
-    if (input.id !== 'deviceId') { // No permitir editar ID directamente
-      input.readOnly = !enable;
-      if (enable) {
-        input.classList.add('editable');
-      } else {
-        input.classList.remove('editable');
-      }
-    }
-  });
-
-  // Habilitar/deshabilitar el menú desplegable de formato de audio
-  const audioFormatSelect = document.getElementById('audio-format');
-  audioFormatSelect.disabled = !enable;
-
-  // Habilitar/deshabilitar el botón de generar UID
-  generateUidBtn.disabled = !enable;
-  
-  editConfigBtn.disabled = enable || !modeConfigActive || !isConnected;
-  saveConfigBtn.disabled = !enable;
-}
-
-// Función para generar un UUID v4
-function generateUUID() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-}
-
-// ===== FUNCIONES PARA MODAL DE CONFIRMACIÓN =====
-
-// Abrir modal de confirmación
-function openConfirmModal() {
-  confirmModal.style.display = 'block';
-  document.body.style.overflow = 'hidden';
-}
-
-// Cerrar modal de confirmación
-function closeConfirmModal() {
-  confirmModal.style.display = 'none';
-  document.body.style.overflow = 'auto';
-}
-
-// ===== FUNCIONES DE GESTIÓN DEL MODAL =====
-
-// Abrir modal con conexión automática
-async function openModal() {
-  configModal.style.display = 'block';
-  document.body.style.overflow = 'hidden'; 
-  
-  // Limpiar formulario
-  deviceIdInput.value = '';
-  wifiSsidInput.value = '';
-  wifiPasswordInput.value = '';
-  
-  // Iniciar la conexión automáticamente al abrir el modal
-  updateStatus('Solicitando puerto USB...', 'connecting');
-  configStatusEl.classList.add('connecting-indicator');
-  
-  try {
-    serialPort = await navigator.serial.requestPort();
-    await serialPort.open({ baudRate: 115200 });
+  /**
+   * Toggle instructions panel visibility
+   */
+  toggleInstructions() {
+    const isActive = this.dom.instructionsContent.classList.contains('active');
+    const toggleIcon = this.dom.instructionsToggle.querySelector('.toggle-icon');
+    const toggleText = this.dom.instructionsToggle.querySelector('span:not(.toggle-icon)');
     
-    isConnected = true;
-    isClosing = false;
-    updateConnectionUI(true);
-    updateStatus('Conectado al puerto serial', 'success');
-    
-    startSerialReading();
-  } catch (error) {
-    if (error.name === 'NotFoundError') {
-      updateStatus('No se seleccionó ningún puerto', 'error');
+    if (isActive) {
+      this.dom.instructionsContent.classList.remove('active');
+      this.dom.instructionsToggle.classList.remove('active');
+      toggleIcon.textContent = '▼';
+      toggleText.textContent = 'Mostrar instrucciones';
+      this.dom.instructionsToggle.setAttribute('aria-expanded', 'false');
     } else {
-      updateStatus(`Error: ${error.message || 'Fallo al conectar'}`, 'error');
+      this.dom.instructionsContent.classList.add('active');
+      this.dom.instructionsToggle.classList.add('active');
+      toggleIcon.textContent = '▲';
+      toggleText.textContent = 'Ocultar instrucciones';
+      this.dom.instructionsToggle.setAttribute('aria-expanded', 'true');
     }
+  }
+
+  /**
+   * Update status message and styling
+   * @param {string} message - Status message
+   * @param {string} type - Status type (info, connecting, error, success)
+   */
+  updateStatus(message, type = STATUS_TYPES.INFO) {
+    this.dom.configStatusEl.textContent = `Estado: ${message}`;
     
-    isConnected = false;
-    isClosing = false;
-    updateConnectionUI(false);
-  } finally {
-    configStatusEl.classList.remove('connecting-indicator');
-  }
-
-  // Iniciar el intervalo para solicitar el estado de la batería
-  batteryStatusInterval = setInterval(requestBatteryStatus, 20000); // Cada 1 minuto
-  requestBatteryStatus(); // Llamar inmediatamente al abrir el modal
-}
-
-// Cerrar modal con desconexión automática
-async function closeModalFn() {
-  // Desactivar modo edición si está activo
-  if (isEditing) {
-    toggleEditMode(false);
-  }
-  
-  // Si hay una conexión activa, desconectar al cerrar el modal
-  if (isConnected && !isClosing) {
-    await disconnectSerial();
-  }
-
-  configModal.style.display = 'none';
-  document.body.style.overflow = 'auto';
-  
-  // Detener el intervalo de actualización de batería
-  if (batteryStatusInterval) {
-    clearInterval(batteryStatusInterval);
-    batteryStatusInterval = null;
-  }
-}
-
-// ===== FUNCIONES DE COMUNICACIÓN SERIAL =====
-
-// Desconectar puerto serial
-async function disconnectSerial() {
-  if (!serialPort || isClosing) {
-    if (isClosing) {
-      updateStatus('Desconectando, por favor espera...', 'connecting');
-    }
-    return;
-  }
-  
-  isClosing = true;
-  updateConnectionUI(false);
-  updateStatus('Desconectando...', 'connecting');
-  
-  try {
-    // Desactivar modo config si está activo
-    if (modeConfigActive) {
-      await sendCommand('MODE_CONFIG OFF', false);
-      await new Promise(resolve => setTimeout(resolve, 500));
-      modeConfigActive = false;
-    }
+    // Remove all status classes
+    Object.values(STATUS_TYPES).forEach(statusType => {
+      this.dom.configStatusEl.classList.remove(statusType);
+    });
     
-    // Cerrar lectura y puerto
-    if (serialReader) {
-      await serialReader.cancel();
-      if (readableStreamClosed) {
-        await readableStreamClosed.catch(() => {});
+    // Add appropriate status class
+    if (Object.values(STATUS_TYPES).includes(type)) {
+      this.dom.configStatusEl.classList.add(type);
+    }
+  }
+
+  /**
+   * Update UI based on connection state
+   * @param {boolean} connected - Connection status
+   */
+  updateConnectionUI(connected) {
+    this.dom.configModeToggle.disabled = !connected;
+    this.dom.configFormEl.style.opacity = connected ? '1' : '0.6';
+    this.dom.editConfigBtn.disabled = !connected || !this.state.modeConfigActive;
+    this.updateModeConfigUI(this.state.modeConfigActive);
+  }
+
+  /**
+   * Update UI based on config mode state
+   * @param {boolean} active - Config mode active status
+   */
+  updateModeConfigUI(active) {
+    this.dom.configModeToggle.checked = active;
+    this.dom.readConfigBtn.disabled = !active || !this.state.isConnected || this.state.isClosing;
+    this.dom.editConfigBtn.disabled = !active || !this.state.isConnected || this.state.isClosing;
+  }
+
+  /**
+   * Toggle edit mode for configuration form
+   * @param {boolean} enable - Enable edit mode
+   */
+  toggleEditMode(enable) {
+    this.state.isEditing = enable;
+    
+    const formInputs = document.querySelectorAll('#config-form .form-control');
+    formInputs.forEach(input => {
+      if (input.id !== 'deviceId') {
+        input.readOnly = !enable;
+        input.classList.toggle('editable', enable);
       }
+    });
+
+    this.dom.audioFormatSelect.disabled = !enable;
+    this.dom.generateUidBtn.disabled = !enable;
+    this.dom.editConfigBtn.disabled = enable || !this.state.modeConfigActive || !this.state.isConnected;
+    this.dom.saveConfigBtn.disabled = !enable;
+  }
+
+  /**
+   * Update battery indicator display
+   * @param {number} percentage - Battery percentage
+   */
+  updateBatteryIndicator(percentage) {
+    this.dom.batteryIndicator.textContent = `🔋${percentage}%`;
+    this.dom.batteryIndicator.setAttribute('aria-label', `Estado de batería: ${percentage}%`);
+  }
+
+  /**
+   * Open configuration modal
+   */
+  openModal() {
+    this.dom.configModal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+    this.dom.configModal.focus();
+  }
+
+  /**
+   * Close configuration modal
+   */
+  closeModal() {
+    this.dom.configModal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+  }
+
+  /**
+   * Open confirmation modal
+   */
+  openConfirmModal() {
+    this.dom.confirmModal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+    this.dom.confirmModal.focus();
+  }
+
+  /**
+   * Close confirmation modal
+   */
+  closeConfirmModal() {
+    this.dom.confirmModal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+  }
+
+  /**
+   * Clear configuration form
+   */
+  clearConfigForm() {
+    this.dom.deviceIdInput.value = '';
+    this.dom.wifiSsidInput.value = '';
+    this.dom.wifiPasswordInput.value = '';
+    this.dom.audioFormatSelect.value = '';
+  }
+
+  /**
+   * Populate configuration form with data
+   * @param {Object} configData - Configuration data
+   */
+  populateConfigForm(configData) {
+    this.dom.deviceIdInput.value = configData.deviceId || '';
+    this.dom.wifiSsidInput.value = configData.wifi_ssid || '';
+    this.dom.wifiPasswordInput.value = configData.wifi_password || '';
+    this.dom.audioFormatSelect.value = configData.audio_format || '';
+  }
+
+  /**
+   * Get configuration data from form
+   * @returns {Object} Configuration data
+   */
+  getConfigFormData() {
+    return {
+      deviceId: this.dom.deviceIdInput.value.trim(),
+      wifi_ssid: this.dom.wifiSsidInput.value.trim(),
+      wifi_password: this.dom.wifiPasswordInput.value.trim(),
+      audio_format: this.dom.audioFormatSelect.value
+    };
+  }
+
+  /**
+   * Validate configuration data
+   * @param {Object} configData - Configuration data to validate
+   * @returns {Object} Validation result
+   */
+  validateConfigData(configData) {
+    const errors = [];
+
+    if (!configData.wifi_ssid) {
+      errors.push('El SSID WiFi no puede estar vacío');
     }
-    
-    if (serialPort) {
-      await serialPort.close();
+
+    if (!configData.deviceId) {
+      errors.push('El ID del dispositivo no puede estar vacío');
     }
-    
-    serialPort = null;
-    serialReader = null;
-    readableStreamClosed = null;
-    isConnected = false;
-    
-    updateStatus('Desconectado del puerto serial');
-  } catch (error) {
-    console.error('Error al desconectar:', error);
-    updateStatus(`Error: ${error.message || 'Fallo al desconectar'}`, 'error');
-    
-    isConnected = false;
-    serialPort = null;
-    serialReader = null;
-    readableStreamClosed = null;
-  } finally {
-    isClosing = false;
-    modeConfigActive = false;
-    waitingForConfigResponse = false;
-    waitingForWriteResponse = false;
-    updateConnectionUI(false);
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
   }
 }
 
-// Modificar la función `startSerialReading` para procesar el porcentaje de batería
-async function startSerialReading() {
-  if (!serialPort?.readable) {
-    console.error('El puerto serial no está disponible para lectura');
-    updateStatus('Error: Puerto serial no disponible', 'error');
-    await disconnectSerial();
-    return;
+// =============================================================================
+// SERIAL COMMUNICATION MANAGER
+// =============================================================================
+
+class SerialManager {
+  constructor(dom, state, uiManager) {
+    this.dom = dom;
+    this.state = state;
+    this.ui = uiManager;
   }
-  
-  const textDecoder = new TextDecoder();
-  let buffer = '';
-  
-  try {
-    serialReader = serialPort.readable.getReader();
-    readableStreamClosed = serialReader.closed.catch(() => {});
+
+  /**
+   * Request and open serial port connection
+   * @returns {Promise<boolean>} Success status
+   */
+  async connect() {
+    this.ui.updateStatus('Solicitando puerto USB...', STATUS_TYPES.CONNECTING);
+    this.dom.configStatusEl.classList.add('connecting-indicator');
     
-    while (true) {
-      try {
-        const { value, done } = await serialReader.read();
-        
-        if (done) {
-          break;
-        }
-        
-        buffer += textDecoder.decode(value);
-        
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-        
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          
-          const cleanLine = stripAnsiEscapeCodes(line.trim());
-          
-          // Procesar respuestas de configuración
-          if (cleanLine.includes('{') && cleanLine.includes('}') || 
-              cleanLine.includes('Config loaded:')) {
-            if (waitingForConfigResponse) {
-              processConfigInfo(cleanLine);
-              waitingForConfigResponse = false;
-            }
-          }
-          
-          // Procesar respuestas de guardado
-          if (waitingForWriteResponse) {
-            if (cleanLine.includes('CONFIG_WRITE: Success')) {
-              updateStatus('Configuración guardada correctamente', 'success');
-              waitingForWriteResponse = false;
-            } else if (cleanLine.includes('CONFIG_WRITE: Error')) {
-              updateStatus('Error al guardar la configuración', 'error');
-              waitingForWriteResponse = false;
-            }
-          }
-          
-          // Detectar cambios en modo config
-          if (cleanLine.includes('MODE_CONFIG: Starting mode_config')) {
-            modeConfigActive = true;
-            updateStatus('Modo Config ACTIVADO', 'success');
-            updateModeConfigUI(true);
-          } else if (cleanLine.includes('MODE_CONFIG: Stopping mode_config')) {
-            modeConfigActive = false;
-            updateStatus('Modo Config DESACTIVADO');
-            updateModeConfigUI(false);
-            toggleEditMode(false); // Desactivar modo edición si se desactiva el modo config
-          }
-          
-          // Procesar respuestas de estado de batería
-          if (cleanLine.includes('"battery_status_percentage":')) {
-            try {
-              const batteryData = JSON.parse(cleanLine);
-              if (batteryData.battery_status_percentage !== undefined) {
-                updateBatteryIndicator(batteryData.battery_status_percentage);
-              }
-            } catch (e) {
-              console.error('Error al procesar estado de batería:', e);
-            }
-          }
-        }
-      } catch (readError) {
-        if (readError.name === 'NetworkError') {
-          updateStatus('Dispositivo desconectado', 'error');
-          break;
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-    }
-  } catch (error) {
-    updateStatus(`Error: ${error.message || 'Fallo de comunicación'}`, 'error');
-  } finally {
-    if (serialReader) {
-      try { serialReader.releaseLock(); } catch (e) {}
-      serialReader = null;
-    }
-    
-    isConnected && await disconnectSerial();
-  }
-}
-
-// Enviar comando al dispositivo
-async function sendCommand(command, updateUI = true) {
-  if (!serialPort || !isConnected) {
-    updateStatus('No hay conexión serial activa', 'error');
-    return false;
-  }
-
-  try {
-    const writer = serialPort.writable.getWriter();
-    
-    if (command === 'CONFIG_READ') {
-      waitingForConfigResponse = true;
-    } else if (command.startsWith('CONFIG_WRITE')) {
-      waitingForWriteResponse = true;
-      updateStatus('Configuración guardada correctamente', 'success');
-    }
-    
-    await writer.write(new TextEncoder().encode(command + '\n'));
-    writer.releaseLock();
-    
-    updateUI && updateStatus(`Comando "${command.split(' ')[0]}" enviado`, 'connecting');
-    
-    if (command === 'MODE_CONFIG ON') {
-      modeConfigActive = true;
-      updateModeConfigUI(true);
-    } else if (command === 'MODE_CONFIG OFF') {
-      modeConfigActive = false;
-      updateModeConfigUI(false);
-      toggleEditMode(false); // Desactivar modo edición si se desactiva el modo config
-    }
-    
-    return true;
-  } catch (error) {
-    updateStatus(`Error: ${error.message || 'Fallo al enviar el comando'}`, 'error');
-    
-    error.name === 'NetworkError' && await disconnectSerial();
-    
-    return false;
-  }
-}
-
-// Función para solicitar el estado de la batería
-async function requestBatteryStatus() {
-  if (!serialPort || !isConnected) return;
-  try {
-    const writer = serialPort.writable.getWriter();
-    await writer.write(new TextEncoder().encode('BATTERY_STATUS\n'));
-    writer.releaseLock();
-  } catch (error) {
-    console.error('Error al solicitar estado de batería:', error);
-  }
-}
-
-// ===== FUNCIONES AUXILIARES =====
-
-// Función para limpiar códigos ANSI
-function stripAnsiEscapeCodes(text) {
-  return text.replace(/\x1B\[\d+(?:;\d+)*m/g, '')
-             .replace(/\[\d+(?:;\d+)*m/g, '');
-}
-
-// Procesar respuestas JSON de configuración
-function processConfigInfo(configText) {
-  try {
-    if (configText.includes('{') && configText.includes('}')) {
-      const jsonStart = configText.indexOf('{');
-      const jsonEnd = configText.lastIndexOf('}') + 1;
-      const jsonStr = configText.substring(jsonStart, jsonEnd);
-      
-      try {
-        const configData = JSON.parse(jsonStr);
-        
-        deviceIdInput.value = configData.deviceId || '';
-        wifiSsidInput.value = configData.wifi_ssid || '';
-        wifiPasswordInput.value = configData.wifi_password || '';
-        audioFormatSelect.value = configData.audio_format || '';
-        
-        updateStatus('Configuración cargada correctamente', 'success');
-        return true;
-      } catch (e) {
-        console.error('Error al parsear JSON:', e);
-        updateStatus('Error: Formato de configuración no válido', 'error');
-      }
-    } else {
-      updateStatus('Error: No se encontró configuración válida', 'error');
-    }
-    return false;
-  } catch (e) {
-    console.error('Error al procesar la configuración:', e);
-    updateStatus('Error: No se pudo procesar la configuración', 'error');
-    return false;
-  }
-}
-
-// Guardar configuración en el dispositivo
-async function saveConfig() {
-  // Obtener valores actuales
-  const configData = {
-    deviceId: deviceIdInput.value,
-    wifi_ssid: wifiSsidInput.value,
-    wifi_password: wifiPasswordInput.value,
-    audio_format: audioFormatSelect.value // Add audio format to the configuration
-  };
-  
-  // Validar datos
-  if (!configData.wifi_ssid.trim()) {
-    updateStatus('Error: El SSID WiFi no puede estar vacío', 'error');
-    return false;
-  }
-  
-  // Serializar a JSON
-  const configJSON = JSON.stringify(configData);
-  
-  // Enviar comando
-  updateStatus('Guardando configuración...', 'connecting');
-  return await sendCommand(`CONFIG_WRITE ${configJSON}`, false);
-}
-
-// Modificar la función `updateBatteryIndicator` para manejar el porcentaje de batería
-function updateBatteryIndicator(percentage) {
-  const batteryIndicator = document.getElementById('battery-indicator');
-  batteryIndicator.textContent = `🔋${percentage}%`;
-}
-
-// ===== EVENTOS =====
-
-// Eventos principales
-boardSelect.addEventListener('change', updateFirmwareDescription);
-configButton.addEventListener('click', openModal);
-closeModal.addEventListener('click', closeModalFn);
-instructionsToggle.addEventListener('click', toggleInstructions);
-
-// Toggle para modo config
-configModeToggle.addEventListener('change', function() {
-  if (this.checked) {
-    sendCommand('MODE_CONFIG ON') && updateStatus('Activando Modo Config...', 'connecting');
-  } else {
-    sendCommand('MODE_CONFIG OFF') && updateStatus('Desactivando Modo Config...', 'connecting');
-  }
-});
-
-// Manejar cierre del modal al hacer clic fuera del contenido
-configModal.addEventListener('click', function(event) {
-  if (event.target === configModal) {
-    closeModalFn();
-  }
-});
-
-// Evento de botón para generar UUID
-generateUidBtn.addEventListener('click', function() {
-  deviceIdInput.value = generateUUID();
-  updateStatus('ID de dispositivo generado', 'success');
-});
-
-// Evento de botón para leer configuración
-readConfigBtn.addEventListener('click', async () => {
-  updateStatus('Leyendo configuración...', 'connecting');
-  await sendCommand('CONFIG_READ');
-});
-
-// Evento de botón para editar configuración
-editConfigBtn.addEventListener('click', function() {
-  toggleEditMode(true);
-});
-
-// Evento de botón para guardar configuración
-saveConfigBtn.addEventListener('click', function() {
-  openConfirmModal();
-});
-
-// Eventos de modal de confirmación
-confirmSaveBtn.addEventListener('click', async function() {
-  closeConfirmModal();
-  if (await saveConfig()) {
-    toggleEditMode(false);
-    // Send RESET command to restart the device
-    await sendCommand('RESET');
-    updateStatus('Dispositivo reiniciado', 'success');
-    await new Promise(resolve => setTimeout(resolve, 5000)); // Esperar 5 segundos
-    await sendCommand('MODE_CONFIG ON');
-  }
-});
-
-confirmCancelBtn.addEventListener('click', function() {
-  closeConfirmModal();
-});
-
-// Cerrar el modal de confirmación al hacer clic fuera
-confirmModal.addEventListener('click', function(event) {
-  if (event.target === confirmModal) {
-    closeConfirmModal();
-  }
-});
-
-// Limpieza al salir
-window.addEventListener('beforeunload', () => {
-  if (isConnected && serialPort && modeConfigActive) {
     try {
-      const writer = serialPort.writable.getWriter();
-      writer.write(new TextEncoder().encode('MODE_CONFIG OFF\n'));
-      writer.releaseLock();
-      serialReader?.cancel();
-      serialPort.close();
-    } catch (e) {}
+      this.state.serialPort = await navigator.serial.requestPort();
+      await this.state.serialPort.open({ baudRate: CONFIG.SERIAL_BAUD_RATE });
+      
+      this.state.isConnected = true;
+      this.state.isClosing = false;
+      this.ui.updateConnectionUI(true);
+      this.ui.updateStatus('Conectado al puerto serial', STATUS_TYPES.SUCCESS);
+      
+      this.startSerialReading();
+      this.startBatteryStatusPolling();
+      
+      return true;
+    } catch (error) {
+      this.handleConnectionError(error);
+      return false;
+    } finally {
+      this.dom.configStatusEl.classList.remove('connecting-indicator');
+    }
   }
-});
 
-// ===== INICIALIZACIÓN =====
-document.addEventListener('DOMContentLoaded', () => {
-  // Verificar compatibilidad del navegador
-  checkBrowserCompatibility();
-  
-  // Cargar instrucciones desde archivo markdown
-  loadInstructions();
-  
-  // Cargar manifiestos de firmware dinámicamente
-  loadFirmwareManifests();
+  /**
+   * Handle connection errors
+   * @param {Error} error - Connection error
+   */
+  handleConnectionError(error) {
+    if (error.name === 'NotFoundError') {
+      this.ui.updateStatus('No se seleccionó ningún puerto', STATUS_TYPES.ERROR);
+    } else {
+      this.ui.updateStatus(`Error: ${error.message || 'Fallo al conectar'}`, STATUS_TYPES.ERROR);
+    }
+    
+    this.state.isConnected = false;
+    this.state.isClosing = false;
+    this.ui.updateConnectionUI(false);
+  }
+
+  /**
+   * Disconnect from serial port
+   */
+  async disconnect() {
+    if (!this.state.serialPort || this.state.isClosing) {
+      if (this.state.isClosing) {
+        this.ui.updateStatus('Desconectando, por favor espera...', STATUS_TYPES.CONNECTING);
+      }
+      return;
+    }
+    
+    this.state.isClosing = true;
+    this.ui.updateConnectionUI(false);
+    this.ui.updateStatus('Desconectando...', STATUS_TYPES.CONNECTING);
+    
+    try {
+      // Disable config mode if active
+      if (this.state.modeConfigActive) {
+        await this.sendCommand(SERIAL_COMMANDS.MODE_CONFIG_OFF, false);
+        await Utils.delay(500);
+        this.state.modeConfigActive = false;
+      }
+      
+      // Close serial connection
+      await this.closeSerialConnection();
+      
+      this.state.reset();
+      this.ui.updateStatus('Desconectado del puerto serial');
+      
+    } catch (error) {
+      console.error('Error disconnecting:', error);
+      this.ui.updateStatus(`Error: ${error.message || 'Fallo al desconectar'}`, STATUS_TYPES.ERROR);
+      this.state.reset();
+    } finally {
+      this.ui.updateConnectionUI(false);
+    }
+  }
+
+  /**
+   * Close serial connection properly
+   */
+  async closeSerialConnection() {
+    if (this.state.serialReader) {
+      await this.state.serialReader.cancel();
+      if (this.state.readableStreamClosed) {
+        await this.state.readableStreamClosed.catch(() => {});
+      }
+    }
+    
+    if (this.state.serialPort) {
+      await this.state.serialPort.close();
+    }
+  }
+
+  /**
+   * Start reading from serial port
+   */
+  async startSerialReading() {
+    if (!this.state.serialPort?.readable) {
+      console.error('Serial port not available for reading');
+      this.ui.updateStatus('Error: Puerto serial no disponible', STATUS_TYPES.ERROR);
+      await this.disconnect();
+      return;
+    }
+    
+    const textDecoder = new TextDecoder();
+    let buffer = '';
+    
+    try {
+      this.state.serialReader = this.state.serialPort.readable.getReader();
+      this.state.readableStreamClosed = this.state.serialReader.closed.catch(() => {});
+      
+      while (true) {
+        try {
+          const { value, done } = await this.state.serialReader.read();
+          
+          if (done) break;
+          
+          buffer += textDecoder.decode(value);
+          buffer = this.processSerialBuffer(buffer);
+          
+        } catch (readError) {
+          if (readError.name === 'NetworkError') {
+            this.ui.updateStatus('Dispositivo desconectado', STATUS_TYPES.ERROR);
+            break;
+          }
+          
+          await Utils.delay(1000);
+        }
+      }
+    } catch (error) {
+      this.ui.updateStatus(`Error: ${error.message || 'Fallo de comunicación'}`, STATUS_TYPES.ERROR);
+    } finally {
+      this.cleanupSerialReader();
+    }
+  }
+
+  /**
+   * Process serial data buffer
+   * @param {string} buffer - Serial data buffer
+   * @returns {string} Remaining buffer data
+   */
+  processSerialBuffer(buffer) {
+    const lines = buffer.split('\n');
+    const remainingBuffer = lines.pop() || '';
+    
+    lines.forEach(line => {
+      if (line.trim()) {
+        this.processSerialLine(line.trim());
+      }
+    });
+    
+    return remainingBuffer;
+  }
+
+  /**
+   * Process individual serial line
+   * @param {string} line - Serial line data
+   */
+  processSerialLine(line) {
+    const cleanLine = Utils.stripAnsiEscapeCodes(line);
+    
+    // Process configuration responses
+    if ((cleanLine.includes('{') && cleanLine.includes('}')) || 
+        cleanLine.includes('Config loaded:')) {
+      if (this.state.waitingForConfigResponse) {
+        this.processConfigResponse(cleanLine);
+        this.state.waitingForConfigResponse = false;
+      }
+    }
+    
+    // Process write responses
+    if (this.state.waitingForWriteResponse) {
+      this.processWriteResponse(cleanLine);
+    }
+    
+    // Process mode config changes
+    this.processModeConfigChanges(cleanLine);
+    
+    // Process battery status
+    this.processBatteryStatus(cleanLine);
+  }
+
+  /**
+   * Process configuration response
+   * @param {string} line - Response line
+   */
+  processConfigResponse(line) {
+    try {
+      if (line.includes('{') && line.includes('}')) {
+        const jsonStart = line.indexOf('{');
+        const jsonEnd = line.lastIndexOf('}') + 1;
+        const jsonStr = line.substring(jsonStart, jsonEnd);
+        
+        const configData = JSON.parse(jsonStr);
+        this.ui.populateConfigForm(configData);
+        this.ui.updateStatus('Configuración cargada correctamente', STATUS_TYPES.SUCCESS);
+      }
+    } catch (error) {
+      console.error('Error parsing config JSON:', error);
+      this.ui.updateStatus('Error: Formato de configuración no válido', STATUS_TYPES.ERROR);
+    }
+  }
+
+  /**
+   * Process write response
+   * @param {string} line - Response line
+   */
+  processWriteResponse(line) {
+    if (line.includes('CONFIG_WRITE: Success')) {
+      this.ui.updateStatus('Configuración guardada correctamente', STATUS_TYPES.SUCCESS);
+      this.state.waitingForWriteResponse = false;
+    } else if (line.includes('CONFIG_WRITE: Error')) {
+      this.ui.updateStatus('Error al guardar la configuración', STATUS_TYPES.ERROR);
+      this.state.waitingForWriteResponse = false;
+    }
+  }
+
+  /**
+   * Process mode config changes
+   * @param {string} line - Response line
+   */
+  processModeConfigChanges(line) {
+    if (line.includes('MODE_CONFIG: Starting mode_config')) {
+      this.state.modeConfigActive = true;
+      this.ui.updateStatus('Modo Config ACTIVADO', STATUS_TYPES.SUCCESS);
+      this.ui.updateModeConfigUI(true);
+    } else if (line.includes('MODE_CONFIG: Stopping mode_config')) {
+      this.state.modeConfigActive = false;
+      this.ui.updateStatus('Modo Config DESACTIVADO');
+      this.ui.updateModeConfigUI(false);
+      this.ui.toggleEditMode(false);
+    }
+  }
+
+  /**
+   * Process battery status response
+   * @param {string} line - Response line
+   */
+  processBatteryStatus(line) {
+    if (line.includes('"battery_status_percentage":')) {
+      try {
+        const batteryData = JSON.parse(line);
+        if (batteryData.battery_status_percentage !== undefined) {
+          this.ui.updateBatteryIndicator(batteryData.battery_status_percentage);
+        }
+      } catch (error) {
+        console.error('Error processing battery status:', error);
+      }
+    }
+  }
+
+  /**
+   * Cleanup serial reader
+   */
+  cleanupSerialReader() {
+    if (this.state.serialReader) {
+      try { 
+        this.state.serialReader.releaseLock(); 
+      } catch (error) {
+        console.warn('Error releasing reader lock:', error);
+      }
+      this.state.serialReader = null;
+    }
+    
+    if (this.state.isConnected) {
+      this.disconnect();
+    }
+  }
+
+  /**
+   * Send command to device
+   * @param {string} command - Command to send
+   * @param {boolean} updateUI - Whether to update UI
+   * @returns {Promise<boolean>} Success status
+   */
+  async sendCommand(command, updateUI = true) {
+    if (!this.state.serialPort || !this.state.isConnected) {
+      this.ui.updateStatus('No hay conexión serial activa', STATUS_TYPES.ERROR);
+      return false;
+    }
+
+    try {
+      const writer = this.state.serialPort.writable.getWriter();
+      
+      this.setCommandFlags(command);
+      
+      await writer.write(new TextEncoder().encode(command + '\n'));
+      writer.releaseLock();
+      
+      if (updateUI) {
+        this.ui.updateStatus(`Comando "${command.split(' ')[0]}" enviado`, STATUS_TYPES.CONNECTING);
+      }
+      
+      this.handleModeConfigCommands(command);
+      
+      return true;
+    } catch (error) {
+      this.ui.updateStatus(`Error: ${error.message || 'Fallo al enviar el comando'}`, STATUS_TYPES.ERROR);
+      
+      if (error.name === 'NetworkError') {
+        await this.disconnect();
+      }
+      
+      return false;
+    }
+  }
+
+  /**
+   * Set command-specific flags
+   * @param {string} command - Command being sent
+   */
+  setCommandFlags(command) {
+    if (command === SERIAL_COMMANDS.CONFIG_READ) {
+      this.state.waitingForConfigResponse = true;
+    } else if (command.startsWith(SERIAL_COMMANDS.CONFIG_WRITE)) {
+      this.state.waitingForWriteResponse = true;
+    }
+  }
+
+  /**
+   * Handle mode config command effects
+   * @param {string} command - Command that was sent
+   */
+  handleModeConfigCommands(command) {
+    if (command === SERIAL_COMMANDS.MODE_CONFIG_ON) {
+      this.state.modeConfigActive = true;
+      this.ui.updateModeConfigUI(true);
+    } else if (command === SERIAL_COMMANDS.MODE_CONFIG_OFF) {
+      this.state.modeConfigActive = false;
+      this.ui.updateModeConfigUI(false);
+      this.ui.toggleEditMode(false);
+    }
+  }
+
+  /**
+   * Start battery status polling
+   */
+  startBatteryStatusPolling() {
+    this.state.batteryStatusInterval = setInterval(() => {
+      this.requestBatteryStatus();
+    }, CONFIG.BATTERY_UPDATE_INTERVAL);
+    
+    // Request immediately
+    this.requestBatteryStatus();
+  }
+
+  /**
+   * Request battery status from device
+   */
+  async requestBatteryStatus() {
+    if (!this.state.serialPort || !this.state.isConnected) return;
+    
+    try {
+      const writer = this.state.serialPort.writable.getWriter();
+      await writer.write(new TextEncoder().encode(SERIAL_COMMANDS.BATTERY_STATUS + '\n'));
+      writer.releaseLock();
+    } catch (error) {
+      console.error('Error requesting battery status:', error);
+    }
+  }
+}
+
+// =============================================================================
+// CONFIGURATION MANAGER
+// =============================================================================
+
+class ConfigManager {
+  constructor(dom, state, uiManager, serialManager) {
+    this.dom = dom;
+    this.state = state;
+    this.ui = uiManager;
+    this.serial = serialManager;
+  }
+
+  /**
+   * Save configuration to device
+   * @returns {Promise<boolean>} Success status
+   */
+  async saveConfig() {
+    const configData = this.ui.getConfigFormData();
+    const validation = this.ui.validateConfigData(configData);
+    
+    if (!validation.isValid) {
+      this.ui.updateStatus(`Error: ${validation.errors[0]}`, STATUS_TYPES.ERROR);
+      return false;
+    }
+    
+    const configJSON = JSON.stringify(configData);
+    this.ui.updateStatus('Guardando configuración...', STATUS_TYPES.CONNECTING);
+    
+    const success = await this.serial.sendCommand(`${SERIAL_COMMANDS.CONFIG_WRITE} ${configJSON}`, false);
+    
+    if (success) {
+      // Send reset command and restart config mode
+      await this.serial.sendCommand(SERIAL_COMMANDS.RESET);
+      this.ui.updateStatus('Dispositivo reiniciado', STATUS_TYPES.SUCCESS);
+      
+      await Utils.delay(CONFIG.DEVICE_RESTART_DELAY);
+      await this.serial.sendCommand(SERIAL_COMMANDS.MODE_CONFIG_ON);
+    }
+    
+    return success;
+  }
+
+  /**
+   * Read configuration from device
+   */
+  async readConfig() {
+    this.ui.updateStatus('Leyendo configuración...', STATUS_TYPES.CONNECTING);
+    await this.serial.sendCommand(SERIAL_COMMANDS.CONFIG_READ);
+  }
+
+  /**
+   * Generate new device UUID
+   */
+  generateDeviceId() {
+    this.dom.deviceIdInput.value = Utils.generateUUID();
+    this.ui.updateStatus('ID de dispositivo generado', STATUS_TYPES.SUCCESS);
+  }
+
+  /**
+   * Toggle config mode
+   * @param {boolean} enable - Enable config mode
+   */
+  async toggleConfigMode(enable) {
+    const command = enable ? SERIAL_COMMANDS.MODE_CONFIG_ON : SERIAL_COMMANDS.MODE_CONFIG_OFF;
+    const statusMessage = enable ? 'Activando Modo Config...' : 'Desactivando Modo Config...';
+    
+    if (await this.serial.sendCommand(command)) {
+      this.ui.updateStatus(statusMessage, STATUS_TYPES.CONNECTING);
+    }
+  }
+}
+
+// =============================================================================
+// MAIN APPLICATION CLASS
+// =============================================================================
+
+class RetailMindInstaller {
+  constructor() {
+    this.dom = new DOMElements();
+    this.state = new ApplicationState();
+    this.ui = new UIManager(this.dom, this.state);
+    this.serial = new SerialManager(this.dom, this.state, this.ui);
+    this.config = new ConfigManager(this.dom, this.state, this.ui, this.serial);
+    this.contentLoader = new ContentLoader(this.dom);
+  }
+
+  /**
+   * Initialize the application
+   */
+  async init() {
+    console.log('Initializing RetailMind Installer...');
+    
+    this.ui.checkBrowserCompatibility();
+    this.setupEventListeners();
+    
+    // Load content
+    await this.contentLoader.loadInstructions();
+    await this.contentLoader.loadFirmwareManifests();
+    
+    console.log('RetailMind Installer initialized successfully');
+  }
+
+  /**
+   * Setup all event listeners
+   */
+  setupEventListeners() {
+    // Main interface events
+    this.dom.boardSelect.addEventListener('change', () => {
+      this.contentLoader.updateFirmwareDescription();
+    });
+    
+    this.dom.configButton.addEventListener('click', () => {
+      this.openConfigModal();
+    });
+    
+    this.dom.instructionsToggle.addEventListener('click', () => {
+      this.ui.toggleInstructions();
+    });
+
+    // Modal events
+    this.setupModalEvents();
+    
+    // Configuration events
+    this.setupConfigEvents();
+    
+    // Window events
+    this.setupWindowEvents();
+  }
+
+  /**
+   * Setup modal-related event listeners
+   */
+  setupModalEvents() {
+    // Close modal events
+    this.dom.closeModal.addEventListener('click', () => {
+      this.closeConfigModal();
+    });
+    
+    this.dom.configModal.addEventListener('click', (event) => {
+      if (event.target === this.dom.configModal) {
+        this.closeConfigModal();
+      }
+    });
+
+    // Confirmation modal events
+    this.dom.confirmSaveBtn.addEventListener('click', () => {
+      this.handleConfirmSave();
+    });
+    
+    this.dom.confirmCancelBtn.addEventListener('click', () => {
+      this.ui.closeConfirmModal();
+    });
+    
+    this.dom.confirmModal.addEventListener('click', (event) => {
+      if (event.target === this.dom.confirmModal) {
+        this.ui.closeConfirmModal();
+      }
+    });
+  }
+
+  /**
+   * Setup configuration-related event listeners
+   */
+  setupConfigEvents() {
+    // Config mode toggle
+    this.dom.configModeToggle.addEventListener('change', (event) => {
+      this.config.toggleConfigMode(event.target.checked);
+    });
+
+    // Configuration buttons
+    this.dom.readConfigBtn.addEventListener('click', () => {
+      this.config.readConfig();
+    });
+    
+    this.dom.editConfigBtn.addEventListener('click', () => {
+      this.ui.toggleEditMode(true);
+    });
+    
+    this.dom.saveConfigBtn.addEventListener('click', () => {
+      this.ui.openConfirmModal();
+    });
+    
+    this.dom.generateUidBtn.addEventListener('click', () => {
+      this.config.generateDeviceId();
+    });
+  }
+
+  /**
+   * Setup window-related event listeners
+   */
+  setupWindowEvents() {
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+      this.cleanup();
+    });
+  }
+
+  /**
+   * Open configuration modal
+   */
+  async openConfigModal() {
+    this.ui.openModal();
+    this.ui.clearConfigForm();
+    
+    // Auto-connect when opening modal
+    await this.serial.connect();
+  }
+
+  /**
+   * Close configuration modal
+   */
+  async closeConfigModal() {
+    // Disable edit mode if active
+    if (this.state.isEditing) {
+      this.ui.toggleEditMode(false);
+    }
+    
+    // Disconnect if connected
+    if (this.state.isConnected && !this.state.isClosing) {
+      await this.serial.disconnect();
+    }
+
+    this.ui.closeModal();
+  }
+
+  /**
+   * Handle confirmation save
+   */
+  async handleConfirmSave() {
+    this.ui.closeConfirmModal();
+    
+    if (await this.config.saveConfig()) {
+      this.ui.toggleEditMode(false);
+    }
+  }
+
+  /**
+   * Cleanup resources
+   */
+  cleanup() {
+    if (this.state.isConnected && this.state.serialPort && this.state.modeConfigActive) {
+      try {
+        const writer = this.state.serialPort.writable.getWriter();
+        writer.write(new TextEncoder().encode(SERIAL_COMMANDS.MODE_CONFIG_OFF + '\n'));
+        writer.releaseLock();
+        this.state.serialReader?.cancel();
+        this.state.serialPort.close();
+      } catch (error) {
+        console.error('Error during cleanup:', error);
+      }
+    }
+    
+    this.state.clearBatteryInterval();
+  }
+}
+
+// =============================================================================
+// APPLICATION INITIALIZATION
+// =============================================================================
+
+/**
+ * Initialize application when DOM is loaded
+ */
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const app = new RetailMindInstaller();
+    await app.init();
+    
+    // Make app globally available for debugging
+    window.retailMindApp = app;
+  } catch (error) {
+    console.error('Failed to initialize RetailMind Installer:', error);
+  }
 });

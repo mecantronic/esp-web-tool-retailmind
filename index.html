@@ -8,174 +8,250 @@
     <meta name="description" content="Herramienta de instalación para dispositivos RetailMind" />
     <link rel="icon" href="favicon.ico" type="image/x-icon" />
     <link rel="stylesheet" href="styles.css" />
+    <!-- ESP Web Tools - Main installation component -->
     <script type="module" src="https://unpkg.com/esp-web-tools@8.0.1/dist/web/install-button.js?module"></script>
-    <!-- Librería para convertir Markdown a HTML -->
+    <!-- Markdown parser for dynamic content -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   </head>
   <body>
     <div class="container">
+      <!-- Header Section -->
       <header>
         <img src="logo.png" alt="RetailMind Logo" class="logo" />
         <h1>Instalador de Firmware</h1>
       </header>
 
       <main class="content-wrapper">
-        <!-- Panel de instrucciones colapsable -->
-        <div class="instructions-panel">
-          <button id="instructions-toggle" class="toggle-button">
-            <span class="toggle-icon">▼</span> Mostrar instrucciones
+        <!-- Instructions Panel - Collapsible -->
+        <section class="instructions-panel" role="region" aria-labelledby="instructions-title">
+          <button 
+            id="instructions-toggle" 
+            class="toggle-button"
+            aria-expanded="false"
+            aria-controls="instructions-content">
+            <span class="toggle-icon" aria-hidden="true">▼</span> 
+            <span id="instructions-title">Mostrar instrucciones</span>
           </button>
-          <div id="instructions-content" class="collapsible-content">
+          <div 
+            id="instructions-content" 
+            class="collapsible-content"
+            aria-labelledby="instructions-title">
             <div class="loading">Cargando instrucciones...</div>
           </div>
-        </div>
+        </section>
 
-        <!-- Panel principal de selección e instalación -->
-        <section class="card firmware-section">
-          <h2>Seleccioná la versión</h2>
-          
+        <!-- Main Firmware Installation Section -->
+        <section class="card firmware-section" role="region" aria-labelledby="firmware-title">
+          <h2 id="firmware-title">Seleccioná la versión</h2>
           <div class="firmware-content">
             <div class="firmware-selection">
-              <select id="board-select">
-                <!-- Las opciones se cargarán dinámicamente desde las carpetas -->
+              <label for="board-select" class="sr-only">Seleccionar versión de firmware</label>
+              <select 
+                id="board-select" 
+                aria-describedby="version-description"
+                aria-label="Versiones de firmware disponibles">
+                <option value="">Cargando versiones...</option>
               </select>
               
               <div class="esp-web-install-button-row">
                 <esp-web-install-button>
-                  <button slot="activate">INSTALAR</button>
+                  <button slot="activate" type="button">INSTALAR</button>
                   <span slot="unsupported">Tu navegador no es compatible.</span>
                   <span slot="not-allowed">No puedes usar esto en HTTP.</span>
                 </esp-web-install-button>
-                <button id="config-button" class="btn btn-secondary">CONFIGURACIÓN</button>
+                <button 
+                  id="config-button" 
+                  class="btn btn-secondary" 
+                  type="button"
+                  aria-describedby="config-help">
+                  CONFIGURACIÓN
+                </button>
               </div>
             </div>
             
-            <div id="version-description" class="version-box"></div>
+            <div 
+              id="version-description" 
+              class="version-box" 
+              role="complementary"
+              aria-live="polite">
+            </div>
           </div>
         </section>
-        
-        <!-- Sección de posibles problemas -->
-        <section class="card troubleshooting-section">
-          <h2>Posibles problemas</h2>
-          
+
+        <!-- Troubleshooting Section -->
+        <section class="card troubleshooting-section" role="region" aria-labelledby="troubleshooting-title">
+          <h2 id="troubleshooting-title">Posibles problemas</h2>
           <div class="troubleshooting-content">
             <div class="troubleshooting-column">
               <h3>Instalación</h3>
               <ul>
-                <li>Si no aparece ningún puerto al hacer clic en "INSTALAR", asegurate de que el dispositivo esté correctamente conectado.</li>
-                <li>Si la instalación falla, intentá reiniciar el dispositivo y recargar la página.</li>
-                <li>En Windows, es posible que necesites instalar los <a href="https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers" target="_blank" rel="noopener">drivers CP210x</a>.</li>
+                <li>Si no aparece ningún puerto, asegurate de que el dispositivo esté conectado.</li>
+                <li>Reiniciá el dispositivo si la instalación falla.</li>
+                <li>En Windows, podrías necesitar los 
+                  <a href="https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers" 
+                     target="_blank" 
+                     rel="noopener noreferrer">drivers CP210x</a>.
+                </li>
               </ul>
             </div>
-            
             <div class="troubleshooting-column">
               <h3>Configuración</h3>
               <ul>
-                <li>Asegurate de que el dispositivo este encendido y despierto. En caso contrario presionar el boton RESET.</li>
-                <li>Si no podés entrar en <strong>Modo Config</strong>, asegurate de que el firmware se haya instalado correctamente.</li>
-                <li>Si la lectura de configuración falla, intentá desconectar y volver a conectar el dispositivo.</li>
-                <li>Si la configuración no se guarda correctamente, verificá que los datos WiFi sean válidos.</li>
-                <li>Asegurate de desactivar el <strong>Modo Config</strong> antes de desconectar físicamente el dispositivo.</li>
+                <li>Asegurate de que el dispositivo esté encendido. Presioná RESET si es necesario.</li>
+                <li>Verificá que el firmware esté instalado si no podés activar el Modo Config.</li>
+                <li>Reintentá conexión si falla la lectura de configuración.</li>
+                <li>Desactivá el Modo Config antes de desconectar físicamente el dispositivo.</li>
               </ul>
             </div>
           </div>
         </section>
       </main>
 
-      <!-- Modal de Configuración -->
-      <div id="config-modal" class="modal">
+      <!-- Configuration Modal -->
+      <div id="config-modal" class="modal" role="dialog" aria-labelledby="modal-title" aria-modal="true">
         <div class="modal-content">
-          <div class="modal-header">
-            <h2>Modo Configuración</h2>
-            <span id="battery-indicator" class="battery-indicator">🔋--%</span>
-            <span class="close-modal">&times;</span>
-          </div>
+          <header class="modal-header">
+            <h2 id="modal-title">Modo Configuración</h2>
+            <span id="battery-indicator" class="battery-indicator" aria-label="Estado de batería">🔋--%</span>
+            <button class="close-modal" type="button" aria-label="Cerrar modal">&times;</button>
+          </header>
+          
           <div class="modal-body">
             <div class="config-columns">
-              <!-- Columna de acciones (sin botón conectar/desconectar) -->
+              <!-- Actions Column -->
               <div class="config-column actions-column">
                 <div class="config-mode-toggle">
                   <label class="switch">
-                    <input type="checkbox" id="config-mode-toggle" disabled>
-                    <span class="slider"></span>
+                    <input 
+                      type="checkbox" 
+                      id="config-mode-toggle" 
+                      disabled
+                      aria-describedby="config-mode-help" />
+                    <span class="slider" aria-hidden="true"></span>
                   </label>
-                  <span class="toggle-label">Modo Config</span>
+                  <span class="toggle-label" id="config-mode-help">Modo Config</span>
                 </div>
                 
-                <button id="read-config" class="btn btn-info" disabled>Leer Configuración</button>
+                <button 
+                  id="read-config" 
+                  class="btn btn-info" 
+                  type="button"
+                  disabled>
+                  Leer Configuración
+                </button>
                 
-                <div id="config-status" class="status-indicator">
+                <div 
+                  id="config-status" 
+                  class="status-indicator"
+                  role="status"
+                  aria-live="polite">
                   Estado: Esperando conexión USB
                 </div>
               </div>
-              
-              <!-- Columna de formulario -->
+
+              <!-- Form Column -->
               <div class="config-column form-column">
-                <div id="config-form" class="config-form">
+                <form id="config-form" class="config-form" novalidate>
                   <div class="form-group">
                     <label for="deviceId">ID del Dispositivo:</label>
                     <div class="input-group">
-                      <input type="text" id="deviceId" class="form-control" readonly>
-                      <button id="generate-uid" class="btn-icon" disabled title="Generar nuevo ID">
+                      <input 
+                        type="text" 
+                        id="deviceId" 
+                        class="form-control" 
+                        readonly
+                        aria-describedby="deviceId-help" />
+                      <button 
+                        id="generate-uid" 
+                        class="btn-icon" 
+                        type="button"
+                        disabled 
+                        title="Generar nuevo ID"
+                        aria-label="Generar nuevo ID">
                         🔁
                       </button>
                     </div>
+                    <small id="deviceId-help" class="form-text">Identificador único del dispositivo</small>
                   </div>
-                  
+
                   <div class="form-group">
                     <label for="wifi-ssid">SSID WiFi:</label>
-                    <input type="text" id="wifi-ssid" class="form-control" readonly>
+                    <input 
+                      type="text" 
+                      id="wifi-ssid" 
+                      class="form-control" 
+                      readonly
+                      aria-describedby="wifi-ssid-help" />
+                    <small id="wifi-ssid-help" class="form-text">Nombre de la red WiFi</small>
                   </div>
-                  
+
                   <div class="form-group">
                     <label for="wifi-password">Contraseña WiFi:</label>
-                    <input type="text" id="wifi-password" class="form-control" readonly>
+                    <input 
+                      type="password" 
+                      id="wifi-password" 
+                      class="form-control" 
+                      readonly
+                      aria-describedby="wifi-password-help" />
+                    <small id="wifi-password-help" class="form-text">Clave de acceso de la red WiFi</small>
                   </div>
-                  
+
                   <div class="form-group">
                     <label for="audio-format">Formato de Audio:</label>
-                    <select id="audio-format" class="form-control" disabled>
+                    <select 
+                      id="audio-format" 
+                      class="form-control" 
+                      disabled
+                      aria-describedby="audio-format-help">
                       <option value="FORMAT_OPUS">FORMAT_OPUS</option>
                       <option value="FORMAT_AAC">FORMAT_AAC</option>
                     </select>
+                    <small id="audio-format-help" class="form-text">Formato de codificación de audio</small>
                   </div>
-                  
+
                   <div class="form-actions">
-                    <button id="edit-config" class="btn btn-secondary">
-                      <span class="edit-icon">✎</span> Editar
+                    <button 
+                      id="edit-config" 
+                      class="btn btn-secondary" 
+                      type="button">
+                      <span class="edit-icon" aria-hidden="true">✎</span> Editar
                     </button>
-                    <button id="save-config" class="btn btn-primary" disabled>
-                      <span class="save-icon">✓</span> Guardar
+                    <button 
+                      id="save-config" 
+                      class="btn btn-primary" 
+                      type="button"
+                      disabled>
+                      <span class="save-icon" aria-hidden="true">✓</span> Guardar
                     </button>
                   </div>
-                </div>
+                </form>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Modal de confirmación -->
-      <div id="confirm-modal" class="confirm-modal">
+      <!-- Confirmation Modal -->
+      <div id="confirm-modal" class="confirm-modal" role="dialog" aria-labelledby="confirm-title" aria-modal="true">
         <div class="confirm-content">
-          <div class="confirm-header">
-            <h3>Confirmar cambios</h3>
-          </div>
+          <header class="confirm-header">
+            <h3 id="confirm-title">Confirmar cambios</h3>
+          </header>
           <div class="confirm-body">
             <p>¿Estás seguro de que deseas guardar los cambios en la configuración?</p>
             <p>El dispositivo se reconectará a la nueva red WiFi si los datos son modificados.</p>
             <p><strong>Nota:</strong> Al confirmar, el dispositivo se reiniciará automáticamente.</p>
           </div>
-          <div class="confirm-footer">
-            <button id="confirm-cancel" class="btn btn-secondary">Cancelar</button>
-            <button id="confirm-save" class="btn btn-primary">Confirmar</button>
-          </div>
+          <footer class="confirm-footer">
+            <button id="confirm-cancel" class="btn btn-secondary" type="button">Cancelar</button>
+            <button id="confirm-save" class="btn btn-primary" type="button">Confirmar</button>
+          </footer>
         </div>
       </div>
 
-      <!-- Alerta de navegador incompatible -->
-      <div id="browser-warning" class="browser-warning" style="display:none;">
-        <div class="warning-icon">⚠️</div>
+      <!-- Browser Incompatibility Warning -->
+      <div id="browser-warning" class="browser-warning" style="display:none;" role="alert">
+        <div class="warning-icon" aria-hidden="true">⚠️</div>
         <div class="warning-text">
           <strong>Navegador no compatible detectado</strong>
           <p>Esta herramienta solo funciona en Google Chrome o Microsoft Edge.</p>
@@ -185,11 +261,16 @@
 
       <!-- Footer -->
       <footer class="footer">
-        Desarrollado y mantenido por <a href="https://mecantronic.com.ar" target="_blank" rel="noopener">Mecantronic S.A</a> | 
-        Basado en <a href="https://esphome.github.io/esp-web-tools/" target="_blank" rel="noopener">ESP Web Tools</a>
+        Desarrollado por <a href="https://mecantronic.com.ar" target="_blank" rel="noopener noreferrer">Mecantronic S.A</a> | 
+        Basado en <a href="https://esphome.github.io/esp-web-tools/" target="_blank" rel="noopener noreferrer">ESP Web Tools</a>
       </footer>
     </div>
-    
+
+    <!-- Screen reader only helper text -->
+    <div class="sr-only">
+      RetailMind firmware installer. Use Chrome or Edge browser for full functionality.
+    </div>
+
     <script src="script.js"></script>
   </body>
 </html>
