@@ -463,7 +463,7 @@ async function closeModalFn() {
   if (isConnected && !isClosing) {
     await disconnectSerial();
   }
-  
+
   configModal.style.display = 'none';
   document.body.style.overflow = 'auto';
 }
@@ -770,6 +770,11 @@ confirmSaveBtn.addEventListener('click', async function() {
   closeConfirmModal();
   if (await saveConfig()) {
     toggleEditMode(false);
+    // Send RESET command to restart the device
+    await sendCommand('RESET');
+    updateStatus('Dispositivo reiniciado', 'success');
+    await new Promise(resolve => setTimeout(resolve, 5000)); // Esperar 5 segundos
+    await sendCommand('MODE_CONFIG ON');
   }
 });
 
