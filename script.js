@@ -12,6 +12,7 @@ const configFormEl = document.getElementById('config-form');
 const deviceIdInput = document.getElementById('deviceId');
 const wifiSsidInput = document.getElementById('wifi-ssid');
 const wifiPasswordInput = document.getElementById('wifi-password');
+const audioFormatSelect = document.getElementById('audio-format');
 const editConfigBtn = document.getElementById('edit-config');
 const saveConfigBtn = document.getElementById('save-config');
 const generateUidBtn = document.getElementById('generate-uid');
@@ -239,22 +240,6 @@ function parseVersion(versionStr) {
   }
 }
 
-// Función auxiliar para convertir string de versión a número para ordenar
-function parseVersion(versionStr) {
-  try {
-    // Convertir "1.1" a 1.1 (número)
-    const parts = versionStr.split('.');
-    let result = 0;
-    for (let i = 0; i < parts.length; i++) {
-      result += parseFloat(parts[i]) / Math.pow(100, i);
-    }
-    return result;
-  } catch (e) {
-    console.warn(`Error al parsear versión ${versionStr}:`, e);
-    return 0; // Valor por defecto si hay error
-  }
-}
-
 // Función para cargar descripción del firmware desde archivo markdown
 async function loadFirmwareDescription(manifestPath) {
   try {
@@ -391,7 +376,11 @@ function toggleEditMode(enable) {
       }
     }
   });
-  
+
+  // Habilitar/deshabilitar el menú desplegable de formato de audio
+  const audioFormatSelect = document.getElementById('audio-format');
+  audioFormatSelect.disabled = !enable;
+
   // Habilitar/deshabilitar el botón de generar UID
   generateUidBtn.disabled = !enable;
   
@@ -683,9 +672,12 @@ function processConfigInfo(configText) {
       
       try {
         const configData = JSON.parse(jsonStr);
+        
         deviceIdInput.value = configData.deviceId || '';
         wifiSsidInput.value = configData.wifi_ssid || '';
         wifiPasswordInput.value = configData.wifi_password || '';
+        audioFormatSelect.value = configData.audio_format || '';
+        
         updateStatus('Configuración cargada correctamente', 'success');
         return true;
       } catch (e) {
@@ -709,7 +701,8 @@ async function saveConfig() {
   const configData = {
     deviceId: deviceIdInput.value,
     wifi_ssid: wifiSsidInput.value,
-    wifi_password: wifiPasswordInput.value
+    wifi_password: wifiPasswordInput.value,
+    audio_format: audioFormatSelect.value // Add audio format to the configuration
   };
   
   // Validar datos
@@ -723,7 +716,7 @@ async function saveConfig() {
   
   // Enviar comando
   updateStatus('Guardando configuración...', 'connecting');
-  return await sendCommand(`CONFIG_WRITE ${configJSON}`, false);  // Para implementar en el futuro
+  return await sendCommand(`CONFIG_WRITE ${configJSON}`, false);
 }
 
 // ===== EVENTOS =====

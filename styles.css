@@ -746,6 +746,12 @@ input:checked + .slider:before {
   cursor: not-allowed;
 }
 
+/* Ensure dropdowns are styled consistently */
+select.form-control {
+  appearance: none;
+  background-color: #f6f8fa;
+}
+
 /* Estilo para campos editables */
 .form-control.editable {
   background-color: white;
