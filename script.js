@@ -38,6 +38,9 @@ let waitingForConfigResponse = false;
 let waitingForWriteResponse = false;
 let isEditing = false;
 
+// Variable para almacenar el intervalo de actualización de batería
+let batteryStatusInterval = null;
+
 // ===== FUNCIONES DE CARGA DE CONTENIDO =====
 
 // Cargar instrucciones desde archivo markdown
@@ -450,6 +453,10 @@ async function openModal() {
   } finally {
     configStatusEl.classList.remove('connecting-indicator');
   }
+
+  // Iniciar el intervalo para solicitar el estado de la batería
+  batteryStatusInterval = setInterval(requestBatteryStatus, 60000); // Cada 1 minuto
+  requestBatteryStatus(); // Llamar inmediatamente al abrir el modal
 }
 
 // Cerrar modal con desconexión automática
@@ -466,6 +473,12 @@ async function closeModalFn() {
 
   configModal.style.display = 'none';
   document.body.style.overflow = 'auto';
+  
+  // Detener el intervalo de actualización de batería
+  if (batteryStatusInterval) {
+    clearInterval(batteryStatusInterval);
+    batteryStatusInterval = null;
+  }
 }
 
 // ===== FUNCIONES DE COMUNICACIÓN SERIAL =====
@@ -591,6 +604,18 @@ async function startSerialReading() {
             updateModeConfigUI(false);
             toggleEditMode(false); // Desactivar modo edición si se desactiva el modo config
           }
+          
+          // Procesar respuestas de estado de batería
+          if (cleanLine.includes('"battery":')) {
+            try {
+              const batteryData = JSON.parse(cleanLine);
+              if (batteryData.battery) {
+                updateBatteryIndicator(batteryData.battery);
+              }
+            } catch (e) {
+              console.error('Error al procesar estado de batería:', e);
+            }
+          }
         }
       } catch (readError) {
         if (readError.name === 'NetworkError') {
@@ -651,6 +676,18 @@ async function sendCommand(command, updateUI = true) {
     error.name === 'NetworkError' && await disconnectSerial();
     
     return false;
+  }
+}
+
+// Función para solicitar el estado de la batería
+async function requestBatteryStatus() {
+  if (!serialPort || !isConnected) return;
+  try {
+    const writer = serialPort.writable.getWriter();
+    await writer.write(new TextEncoder().encode('BATTERY_STATUS\n'));
+    writer.releaseLock();
+  } catch (error) {
+    console.error('Error al solicitar estado de batería:', error);
   }
 }
 

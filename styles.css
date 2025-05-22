@@ -468,6 +468,13 @@ esp-web-install-button::part(button):hover {
   color: white;
 }
 
+.battery-indicator {
+  font-size: 1rem;
+  font-weight: bold;
+  color: white;
+  margin-right: 15px;
+}
+
 .modal-body {
   padding: 24px 20px;
   color: #333;
